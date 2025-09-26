@@ -2,6 +2,10 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  env: {
+    NEXT_PUBLIC_CONTRACT_ADDRESS: '0x1234567890123456789012345678901234567890',
+    NEXT_PUBLIC_TOKEN_ADDRESS: '0x0987654321098765432109876543210987654321',
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -26,7 +30,7 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'picsum.photos',
         port: '',
-        pathname: '/**',
+pathname: '/**',
       },
     ],
   },
