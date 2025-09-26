@@ -4,7 +4,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDownRight, Gem, Loader2, LogOut, PiggyBank, Scaling, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, Loader2, LogOut, PiggyBank, Scaling, Users, Wallet } from "lucide-react";
 
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ const Header = () => {
   return (
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-2">
-        <Gem className="text-primary h-6 w-6" />
+        <span className="text-primary text-3xl font-bold">⨻</span>
         <h1 className="text-xl font-bold font-headline">MakeMeRich Game</h1>
       </div>
       {isClient && isConnected ? (
@@ -78,8 +78,8 @@ const ConnectWalletView = () => {
   const { connectWallet, isLoading } = useWeb3();
   return (
     <div className="flex flex-col items-center justify-center text-center h-[calc(100vh-80px)]">
-      <div className="bg-accent rounded-full p-4 mb-6">
-        <Gem className="text-primary h-12 w-12" />
+      <div className="bg-accent rounded-full p-4 mb-6 flex items-center justify-center w-24 h-24">
+        <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich</h2>
       <p className="text-muted-foreground mb-6 max-w-md">Connect your Web3 wallet to start playing. The game where you can multiply your tokens or lose them all. High risk, high reward!</p>
