@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "./ui/separator";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -142,6 +143,21 @@ const Dashboard = () => {
                             <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
                         </div>
                      }
+                    <Separator />
+                    <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                           <Button variant="outline" size="sm" asChild className="w-full">
+                                <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB Exchange</a>
+                           </Button>
+                            <Button variant="outline" size="sm" asChild className="w-full">
+                                <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit Exchange</a>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild className="w-full">
+                                <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">PancakeSwap</a>
+                            </Button>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
             <Card>
