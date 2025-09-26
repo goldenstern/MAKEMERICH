@@ -79,44 +79,32 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = tokenBalanceData?.decimals ?? 18;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-  const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
+  const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
-    args: address ? [address] : undefined,
     query: {
         enabled: isConnected && !!address,
     }
   });
-
-  const gameData: GameData | null = gameDataResult ? {
-    playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
-    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
-    numberOfPlayers: Number((gameDataResult as any)[2]),
-    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
-    riskCoefficient: Number((gameDataResult as any)[4]),
-  } : null;
-
-  useEffect(() => {
-    console.log("--- DEBUG: Token Balance ---");
-    console.log("Is Loading:", isTokenBalanceLoading);
-    console.log("Raw Data:", tokenBalanceData);
-    console.log("Parsed Balance:", tokenBalance);
-    console.log("--------------------------");
-  }, [tokenBalanceData, isTokenBalanceLoading, tokenBalance]);
-
-  useEffect(() => {
-    console.log("--- DEBUG: Game Data ---");
-    console.log("Is Loading:", isGameDataLoading);
-    console.log("Is Error:", isError);
-    if (isError) {
-        console.error("Game Data Error:", error);
+  
+  const { data: playerBalanceResult, isLoading: isPlayerBalanceLoading, refetch: refetchPlayerBalance } = useReadContract({
+    abi: gameABI,
+    address: contractAddress,
+    functionName: 'players',
+    args: [address as `0x${string}`],
+    query: {
+        enabled: isConnected && !!address,
     }
-    console.log("Raw Data:", gameDataResult);
-    console.log("Parsed Data:", gameData);
-    console.log("------------------------");
-  }, [gameDataResult, isGameDataLoading, isError, error, gameData]);
-
+  });
+  
+  const gameData: GameData | null = gameDataResult ? {
+    playerBalance: playerBalanceResult ? parseFloat(formatUnits((playerBalanceResult as any)[0], tokenDecimals)) : 0,
+    totalPool: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
+    numberOfPlayers: Number((gameDataResult as any)[1]),
+    minBet: parseFloat(formatUnits((gameDataResult as any)[2], tokenDecimals)),
+    riskCoefficient: Number((gameDataResult as any)[3]),
+  } : null;
 
   const connectWallet = () => {
     connect({ connector: injected() });
@@ -129,7 +117,8 @@ export function useWeb3Provider(): Web3ContextType {
   const refreshAllData = useCallback(() => {
     refetchGameData();
     refetchTokenBalance();
-  }, [refetchGameData, refetchTokenBalance]);
+    refetchPlayerBalance();
+  }, [refetchGameData, refetchTokenBalance, refetchPlayerBalance]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -137,7 +126,6 @@ export function useWeb3Provider(): Web3ContextType {
         title: "Кошелек подключен",
         description: `Добро пожаловать, ${formattedAddress}`,
       });
-      console.log("Wallet connected, refetching data...");
       refreshAllData();
     } else if (!isConnected) {
         toast({
@@ -150,7 +138,6 @@ export function useWeb3Provider(): Web3ContextType {
       if (receipt) {
           toast({ title: "Успех", description: `Транзакция ${receipt.transactionHash.slice(0,10)}... подтверждена.` });
           refreshAllData();
-          // Clear the processed hash
           setTxHashes(hashes => hashes.filter(h => h !== receipt.transactionHash));
       }
   }, [receipt, refreshAllData, toast]);
@@ -175,9 +162,8 @@ export function useWeb3Provider(): Web3ContextType {
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
-      setLoadingState(action, false); // Turn off loading only on error
+      setLoadingState(action, false);
     }
-    // Loading state will be turned off by the receipt useEffect
   };
   
    useEffect(() => {
@@ -215,21 +201,23 @@ export function useWeb3Provider(): Web3ContextType {
         });
         
         toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
-        
-        const approveReceipt = await new Promise((resolve, reject) => {
-          const unwatch = useWaitForTransactionReceipt({ hash: approveHash });
-          // This is a simplified waiter, in a real app you'd want a more robust listener
-          const interval = setInterval(() => {
-            if (unwatch.data) {
-              clearInterval(interval);
-              resolve(unwatch.data);
-            }
-            if (unwatch.isError) {
-              clearInterval(interval);
-              reject(unwatch.error);
-            }
-          }, 1000);
+
+        // A more robust way to wait for transaction receipt
+        const receiptPromise = new Promise((resolve, reject) => {
+            const unwatch = useWaitForTransactionReceipt({ hash: approveHash });
+            const checkInterval = setInterval(() => {
+                if (unwatch.data) {
+                    clearInterval(checkInterval);
+                    resolve(unwatch.data);
+                }
+                if (unwatch.isError) {
+                    clearInterval(checkInterval);
+                    reject(unwatch.error);
+                }
+            }, 1000);
         });
+        
+        const approveReceipt = await receiptPromise;
 
         if (approveReceipt) {
             toast({ title: "Подтверждено!", description: "Внесение токенов..." });
@@ -267,7 +255,7 @@ export function useWeb3Provider(): Web3ContextType {
     tokenBalance,
     tokenSymbol: tokenBalanceData?.symbol,
     gameData,
-    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading)),
+    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading || isPlayerBalanceLoading)),
     actionLoading,
     connectWallet,
     disconnectWallet,
