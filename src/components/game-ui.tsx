@@ -119,7 +119,7 @@ const Dashboard = () => {
         <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit="Tokens" />
         <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
         <StatCard icon={ArrowDownRight} title="Minimum Bet" value={gameData?.minBet ?? 0} isLoading={isLoading} unit="Tokens" />
-        <StatCard icon={Scaling} title="Risk Coefficient" value={`x${gameData?.riskCoefficient ?? 0}`} isLoading={isLoading} />
+        <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -249,5 +249,3 @@ export default function GameUI() {
     </div>
   );
 }
-
-    
