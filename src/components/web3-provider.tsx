@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { mainnet, sepolia, defineChain } from 'wagmi/chains';
+import { mainnet, sepolia } from 'wagmi/chains';
+import { defineChain } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Web3Context, useWeb3Provider } from "@/hooks/use-web3";
 
