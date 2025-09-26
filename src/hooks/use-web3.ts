@@ -74,16 +74,17 @@ export function useWeb3Provider(): Web3ContextType {
     }
   });
   
-  const tokenDecimals = tokenBalanceData?.decimals ?? 18;
+  const tokenDecimals = 8;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
     const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
-    args: undefined,
+    args: address ? [address] : undefined,
     query: {
         enabled: isConnected && !!address,
+        refetchOnWindowFocus: true,
     }
     });
 
@@ -96,16 +97,18 @@ export function useWeb3Provider(): Web3ContextType {
   } : null;
 
   useEffect(() => {
-    console.log("--- DEBUG: Game Data ---");
-    console.log("Is Loading:", isGameDataLoading);
-    console.log("Is Error:", isError);
-    if (isError) {
-        console.error("Game Data Error:", error);
+    if (isConnected && address) {
+        console.log("--- DEBUG: Game Data ---");
+        console.log("Is Loading:", isGameDataLoading);
+        console.log("Is Error:", isError);
+        if (isError) {
+            console.error("Game Data Error:", error);
+        }
+        console.log("Raw Data:", gameDataResult);
+        console.log("Parsed Data:", gameData);
+        console.log("------------------------");
     }
-    console.log("Raw Data:", gameDataResult);
-    console.log("Parsed Data:", gameData);
-    console.log("------------------------");
-  }, [gameDataResult, isGameDataLoading, isError, error, gameData]);
+  }, [gameDataResult, isGameDataLoading, isError, error, gameData, isConnected, address]);
 
 
   const connectWallet = () => {
