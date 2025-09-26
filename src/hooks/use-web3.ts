@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance } from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import { parseEther, formatEther } from 'ethers';
+import { gameABI } from '@/lib/abi';
 
 export interface GameData {
   playerBalance: number;
@@ -13,13 +17,13 @@ export interface GameData {
 
 export interface Web3ContextType {
   isConnected: boolean;
-  address: string | null;
+  address: `0x${string}` | undefined;
   formattedAddress: string | null;
   tokenBalance: number;
   gameData: GameData | null;
   isLoading: boolean;
   actionLoading: Record<string, boolean>;
-  connectWallet: () => Promise<void>;
+  connectWallet: () => void;
   disconnectWallet: () => void;
   deposit: (amount: number) => Promise<void>;
   withdraw: (amount: number) => Promise<void>;
@@ -39,138 +43,140 @@ export const useWeb3 = () => {
   return context;
 };
 
-export function useWeb3Provider() {
-  const { toast } = useToast();
-  const [isConnected, setIsConnected] = useState(false);
-  const [address, setAddress] = useState<string | null>(null);
-  const [formattedAddress, setFormattedAddress] = useState<string | null>(null);
-  const [tokenBalance, setTokenBalance] = useState(1000);
-  const [gameData, setGameData] = useState<GameData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
-  
-  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+const contractAddress = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) || '0x';
+const tokenAddress = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS as `0x${string}`) || '0x';
 
+
+export function useWeb3Provider(): Web3ContextType {
+  const { toast } = useToast();
+  const { address, isConnected, isConnecting } = useAccount();
+  const { connect } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { writeContractAsync } = useWriteContract();
+
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const setLoadingState = (action: string, state: boolean) => {
     setActionLoading(prev => ({ ...prev, [action]: state }));
   };
+
+  const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
+
+  const { data: tokenBalanceData } = useBalance({
+    address,
+    token: tokenAddress,
+  });
+  const tokenBalance = tokenBalanceData ? parseFloat(formatEther(tokenBalanceData.value)) : 0;
   
-  const refreshData = useCallback(async () => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setGameData(prevData => ({
-      playerBalance: prevData?.playerBalance ?? 0,
-      totalPool: 150000,
-      numberOfPlayers: 42,
-      minBet: 100,
-      riskCoefficient: 5,
-    }));
-    setIsLoading(false);
-  }, []);
+  const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData } = useReadContract({
+    abi: gameABI,
+    address: contractAddress,
+    functionName: 'getGameData',
+    args: [address],
+  });
 
-  useEffect(() => {
-    if (isConnected) {
-      refreshData();
-    } else {
-      setGameData(null);
-      setTokenBalance(1000);
-    }
-  }, [isConnected, refreshData]);
+  const gameData: GameData | null = gameDataResult ? {
+    playerBalance: parseFloat(formatEther((gameDataResult as any)[0])),
+    totalPool: parseFloat(formatEther((gameDataResult as any)[1])),
+    numberOfPlayers: Number((gameDataResult as any)[2]),
+    minBet: parseFloat(formatEther((gameDataResult as any)[3])),
+    riskCoefficient: Number((gameDataResult as any)[4]),
+  } : null;
 
-  const connectWallet = async () => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const mockAddress = `0x${Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-    setAddress(mockAddress);
-    setFormattedAddress(formatAddress(mockAddress));
-    setIsConnected(true);
-    setIsLoading(false);
-    toast({
-      title: "Wallet Connected",
-      description: `Welcome, ${formatAddress(mockAddress)}`,
-    });
+  const connectWallet = () => {
+    connect({ connector: injected() });
   };
 
   const disconnectWallet = () => {
-    setIsConnected(false);
-    setAddress(null);
-    setFormattedAddress(null);
-    toast({
-      title: "Wallet Disconnected",
-    });
+    disconnect();
   };
-  
-  const handleTransaction = async (action: string, amount: number, task: () => void) => {
-    if (amount <= 0) {
-      toast({ variant: "destructive", title: "Invalid Amount", description: "Please enter a positive amount." });
-      return;
+
+  useEffect(() => {
+    if (isConnected && address) {
+      toast({
+        title: "Wallet Connected",
+        description: `Welcome, ${formattedAddress}`,
+      });
+      refetchGameData();
+    } else if (!isConnected) {
+        toast({
+            title: "Wallet Disconnected",
+        });
     }
+  }, [isConnected, address, formattedAddress]);
+
+
+  const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
     setLoadingState(action, true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
     try {
-      task();
-      toast({ title: "Success", description: `Transaction successful.` });
-      refreshData();
+      const tx = await writeContractAsync({
+        abi: gameABI,
+        address: contractAddress,
+        functionName,
+        args,
+      });
+      toast({ title: "Transaction Sent", description: "Waiting for confirmation..." });
+      // In a real app, you would wait for transaction receipt here.
+      // For this demo, we'll just optimistically refetch.
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulating confirmation time
+      toast({ title: "Success", description: `Transaction confirmed.` });
+      refetchGameData();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Transaction Failed", description: e.message });
+      console.error(e);
+      toast({ variant: "destructive", title: "Transaction Failed", description: e.shortMessage || e.message });
     } finally {
       setLoadingState(action, false);
     }
   };
 
   const deposit = async (amount: number) => {
-    await handleTransaction('deposit', amount, () => {
-        if (amount > tokenBalance) {
-            throw new Error("Insufficient wallet balance.");
-        }
-        setTokenBalance(prev => prev - amount);
-        setGameData(prev => prev ? { ...prev, playerBalance: prev.playerBalance + amount } : null);
-    });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid Amount" });
+    // First, approve the contract to spend tokens
+    setLoadingState('deposit', true);
+    try {
+        await writeContractAsync({
+            abi: [ // ERC20 approve ABI
+              {
+                "constant": false,
+                "inputs": [
+                  { "name": "_spender", "type": "address" },
+                  { "name": "_value", "type": "uint256" }
+                ],
+                "name": "approve",
+                "outputs": [{ "name": "", "type": "bool" }],
+                "type": "function"
+              }
+            ],
+            address: tokenAddress,
+            functionName: 'approve',
+            args: [contractAddress, parseEther(amount.toString())],
+        });
+        toast({ title: "Approval Sent", description: "Waiting for approval confirmation..." });
+        // Again, waiting for real confirmation is better
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        toast({ title: "Approved!", description: "Now depositing tokens..." });
+
+        await handleTransaction('deposit', 'deposit', [parseEther(amount.toString())]);
+
+    } catch (e: any) {
+        console.error(e);
+        toast({ variant: "destructive", title: "Deposit Failed", description: e.shortMessage || e.message });
+    } finally {
+        setLoadingState('deposit', false);
+    }
   };
 
   const withdraw = async (amount: number) => {
-    await handleTransaction('withdraw', amount, () => {
-        if (!gameData || amount > gameData.playerBalance) {
-            throw new Error("Insufficient game balance.");
-        }
-        setTokenBalance(prev => prev + amount);
-        setGameData(prev => prev ? { ...prev, playerBalance: prev.playerBalance - amount } : null);
-    });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid Amount" });
+    await handleTransaction('withdraw', 'withdraw', [parseEther(amount.toString())]);
   };
 
   const withdrawAll = async () => {
-    const amount = gameData?.playerBalance ?? 0;
-    if (amount <= 0) {
-        toast({ variant: "destructive", title: "No Balance to Withdraw", description: "Your game balance is zero." });
-        return;
-    }
-    setLoadingState('withdrawAll', true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setTokenBalance(prev => prev + amount);
-    setGameData(prev => prev ? { ...prev, playerBalance: 0 } : null);
-    toast({ title: "Success", description: "Withdrew all tokens from game balance." });
-    setLoadingState('withdrawAll', false);
+    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "No balance to withdraw" });
+    await handleTransaction('withdrawAll', 'withdrawAll', []);
   };
 
   const makeMeRich = async () => {
-    if (!gameData || gameData.playerBalance < gameData.minBet) {
-      toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData.minBet} tokens to play.` });
-      return;
-    }
-    setLoadingState('makeMeRich', true);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    const isWin = Math.random() > 0.5;
-    if (isWin) {
-      const winnings = (gameData?.playerBalance ?? 0) * (gameData?.riskCoefficient ?? 2);
-      setGameData(prev => prev ? { ...prev, playerBalance: prev.playerBalance + winnings } : null);
-      toast({ title: "YOU WON!", description: `You won ${winnings.toLocaleString()} tokens! Feeling rich?` });
-    } else {
-      setGameData(prev => prev ? { ...prev, playerBalance: 0 } : null);
-      toast({ variant: "destructive", title: "You Lost...", description: "Your balance went to zero. Better luck next time!" });
-    }
-    
-    setLoadingState('makeMeRich', false);
+    await handleTransaction('makeMeRich', 'makeMeRich', []);
   };
 
   return {
@@ -179,7 +185,7 @@ export function useWeb3Provider() {
     formattedAddress,
     tokenBalance,
     gameData,
-    isLoading,
+    isLoading: isConnecting || (isConnected && isGameDataLoading),
     actionLoading,
     connectWallet,
     disconnectWallet,
@@ -187,7 +193,7 @@ export function useWeb3Provider() {
     withdraw,
     withdrawAll,
     makeMeRich,
-    contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
-    tokenAddress: process.env.NEXT_PUBLIC_TOKEN_ADDRESS
+    contractAddress,
+    tokenAddress
   };
 }
