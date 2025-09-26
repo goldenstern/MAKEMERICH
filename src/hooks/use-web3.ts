@@ -71,7 +71,10 @@ export function useWeb3Provider(): Web3ContextType {
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
-    args: [address],
+    args: [address!],
+    query: {
+        enabled: !!address,
+    }
   });
 
   const gameData: GameData | null = gameDataResult ? {
@@ -103,7 +106,7 @@ export function useWeb3Provider(): Web3ContextType {
             title: "Кошелек отключен",
         });
     }
-  }, [isConnected, address, formattedAddress]);
+  }, [isConnected, address, formattedAddress, refetchGameData, refetchTokenBalance, toast]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
