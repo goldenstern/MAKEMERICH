@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { parseEther, formatUnits } from 'viem';
+import { parseUnits, formatUnits } from 'viem';
 import { gameABI } from '@/lib/abi';
 
 export interface GameData {
@@ -69,24 +69,35 @@ export function useWeb3Provider(): Web3ContextType {
         enabled: isConnected && !!address,
     }
   });
-
-  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenBalanceData.decimals) : "0";
   
+  const tokenDecimals = tokenBalanceData?.decimals ?? 18;
+  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
+
   const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
-    args: address ? [address] : undefined,
     query: {
-        enabled: isConnected && !!address && address.startsWith('0x'),
+        enabled: isConnected, // Теперь зависит только от подключения
     }
   });
 
+  const { data: playerContractData, isLoading: isPlayerBalanceLoading, refetch: refetchPlayerBalance } = useReadContract({
+      abi: gameABI,
+      address: contractAddress,
+      functionName: 'players',
+      args: address ? [address] : undefined,
+      query: {
+          enabled: isConnected && !!address,
+      }
+  });
+
   const gameData: GameData | null = gameDataResult ? {
-    playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenBalanceData?.decimals ?? 18)),
-    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenBalanceData?.decimals ?? 18)),
+    // @ts-ignore
+    playerBalance: playerContractData ? parseFloat(formatUnits(playerContractData[0], tokenDecimals)) : 0,
+    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
     numberOfPlayers: Number((gameDataResult as any)[2]),
-    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenBalanceData?.decimals ?? 18)),
+    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
     riskCoefficient: Number((gameDataResult as any)[4]),
   } : null;
 
@@ -129,6 +140,7 @@ export function useWeb3Provider(): Web3ContextType {
       console.log("Wallet connected, refetching data...");
       refetchGameData();
       refetchTokenBalance();
+      refetchPlayerBalance();
     } else if (!isConnected) {
         toast({
             title: "Кошелек отключен",
@@ -147,12 +159,12 @@ export function useWeb3Provider(): Web3ContextType {
         args,
       });
       toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
-      // In a real app, you would wait for transaction receipt here.
-      // For this demo, we'll just optimistically refetch.
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Simulating confirmation time
+      
+      await new Promise(resolve => setTimeout(resolve, 5000)); 
       toast({ title: "Успех", description: `Транзакция подтверждена.` });
       refetchGameData();
       refetchTokenBalance();
+      refetchPlayerBalance();
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
@@ -163,11 +175,12 @@ export function useWeb3Provider(): Web3ContextType {
 
   const deposit = async (amount: number) => {
     if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
-    // First, approve the contract to spend tokens
+    const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
+    
     setLoadingState('deposit', true);
     try {
         await writeContractAsync({
-            abi: [ // ERC20 approve ABI
+            abi: [ 
               {
                 "constant": false,
                 "inputs": [
@@ -181,26 +194,26 @@ export function useWeb3Provider(): Web3ContextType {
             ],
             address: tokenAddress,
             functionName: 'approve',
-            args: [contractAddress, parseEther(amount.toString())],
+            args: [contractAddress, amountInUnits],
         });
         toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
-        // Again, waiting for real confirmation is better
+        
         await new Promise(resolve => setTimeout(resolve, 5000));
         toast({ title: "Подтверждено!", description: "Внесение токенов..." });
 
-        await handleTransaction('deposit', 'deposit', [parseEther(amount.toString())]);
+        await handleTransaction('deposit', 'deposit', [amountInUnits]);
 
     } catch (e: any) {
         console.error(e);
         toast({ variant: "destructive", title: "Ошибка депозита", description: e.shortMessage || e.message });
-    } finally {
         setLoadingState('deposit', false);
-    }
+    } 
   };
 
   const withdraw = async (amount: number) => {
     if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
-    await handleTransaction('withdraw', 'withdraw', [parseEther(amount.toString())]);
+    const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
+    await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
   };
 
   const withdrawAll = async () => {
@@ -219,7 +232,7 @@ export function useWeb3Provider(): Web3ContextType {
     tokenBalance,
     tokenSymbol: tokenBalanceData?.symbol,
     gameData,
-    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading)),
+    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading || isPlayerBalanceLoading)),
     actionLoading,
     connectWallet,
     disconnectWallet,
