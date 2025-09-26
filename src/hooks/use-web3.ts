@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { parseEther, formatUnits, formatEther } from 'viem';
+import { parseEther, formatUnits } from 'viem';
 import { gameABI } from '@/lib/abi';
 
 export interface GameData {
@@ -78,15 +78,15 @@ export function useWeb3Provider(): Web3ContextType {
     functionName: 'getGameData',
     args: [address!],
     query: {
-        enabled: !!address,
+        enabled: !!address && address.startsWith('0x'),
     }
   });
 
   const gameData: GameData | null = gameDataResult ? {
-    playerBalance: parseFloat(formatEther((gameDataResult as any)[0])),
-    totalPool: parseFloat(formatEther((gameDataResult as any)[1])),
+    playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenBalanceData?.decimals ?? 18)),
+    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenBalanceData?.decimals ?? 18)),
     numberOfPlayers: Number((gameDataResult as any)[2]),
-    minBet: parseFloat(formatEther((gameDataResult as any)[3])),
+    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenBalanceData?.decimals ?? 18)),
     riskCoefficient: Number((gameDataResult as any)[4]),
   } : null;
 
@@ -235,5 +235,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
-    
