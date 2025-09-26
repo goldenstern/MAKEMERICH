@@ -82,8 +82,9 @@ export function useWeb3Provider(): Web3ContextType {
     address: contractAddress,
     functionName: 'getGameData',
     args: [],
+    account: address, // This is the fix!
     query: {
-        enabled: false, // Отключаем начальный вызов
+        enabled: isConnected && !!address,
         queryKey: ['getGameData', address], 
     }
     });
@@ -98,17 +99,16 @@ export function useWeb3Provider(): Web3ContextType {
 
     useAccountEffect({
         onConnect: (data) => {
-            console.log('useAccountEffect: Wallet connected', data);
+            console.log('Wallet connected, initiating data refetch...');
             toast({
                 title: "Кошелек подключен",
                 description: `Добро пожаловать, ${data.address}`,
             });
-            console.log("Wallet connected, initiating data refetch via useAccountEffect...");
             refetchGameData();
             refetchTokenBalance();
         },
         onDisconnect: () => {
-            console.log('useAccountEffect: Wallet disconnected');
+            console.log('Wallet disconnected');
             toast({
                 title: "Кошелек отключен",
             });
@@ -116,16 +116,19 @@ export function useWeb3Provider(): Web3ContextType {
     });
 
   useEffect(() => {
-    // Этот useEffect теперь только для отладки
     if (isConnected && address) {
-        console.log("--- DEBUG: Game Data ---");
+        console.log("--- START DIAGNOSTIC LOG ---");
+        console.log("Wallet connected, refetching data...");
+        console.log("--- RAW getGameData Response ---");
         console.log("Is Loading:", isGameDataLoading);
         console.log("Is Error:", isError);
         if (isError) {
             console.error("Error fetching getGameData:", error);
         }
-        console.log("Raw Data:", gameDataResult);
+        console.log("Raw Data Result:", gameDataResult);
+        console.log("--- Parsed gameData Object ---");
         console.log("Parsed Data:", gameData);
+        console.log("--- END DIAGNOSTIC LOG ---");
     }
   }, [gameDataResult, isGameDataLoading, isError, error, gameData, isConnected, address]);
 
