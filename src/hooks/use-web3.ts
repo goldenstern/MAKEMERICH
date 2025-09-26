@@ -61,7 +61,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
-  const { data: tokenBalanceData } = useBalance({
+  const { data: tokenBalanceData, refetch: refetchTokenBalance } = useBalance({
     address,
     token: tokenAddress,
   });
@@ -93,13 +93,14 @@ export function useWeb3Provider(): Web3ContextType {
   useEffect(() => {
     if (isConnected && address) {
       toast({
-        title: "Wallet Connected",
-        description: `Welcome, ${formattedAddress}`,
+        title: "Кошелек подключен",
+        description: `Добро пожаловать, ${formattedAddress}`,
       });
       refetchGameData();
+      refetchTokenBalance();
     } else if (!isConnected) {
         toast({
-            title: "Wallet Disconnected",
+            title: "Кошелек отключен",
         });
     }
   }, [isConnected, address, formattedAddress]);
@@ -114,22 +115,23 @@ export function useWeb3Provider(): Web3ContextType {
         functionName,
         args,
       });
-      toast({ title: "Transaction Sent", description: "Waiting for confirmation..." });
+      toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
       // In a real app, you would wait for transaction receipt here.
       // For this demo, we'll just optimistically refetch.
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulating confirmation time
-      toast({ title: "Success", description: `Transaction confirmed.` });
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Simulating confirmation time
+      toast({ title: "Успех", description: `Транзакция подтверждена.` });
       refetchGameData();
+      refetchTokenBalance();
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Transaction Failed", description: e.shortMessage || e.message });
+      toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
     } finally {
       setLoadingState(action, false);
     }
   };
 
   const deposit = async (amount: number) => {
-    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid Amount" });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
     // First, approve the contract to spend tokens
     setLoadingState('deposit', true);
     try {
@@ -150,28 +152,28 @@ export function useWeb3Provider(): Web3ContextType {
             functionName: 'approve',
             args: [contractAddress, parseEther(amount.toString())],
         });
-        toast({ title: "Approval Sent", description: "Waiting for approval confirmation..." });
+        toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
         // Again, waiting for real confirmation is better
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        toast({ title: "Approved!", description: "Now depositing tokens..." });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        toast({ title: "Подтверждено!", description: "Внесение токенов..." });
 
         await handleTransaction('deposit', 'deposit', [parseEther(amount.toString())]);
 
     } catch (e: any) {
         console.error(e);
-        toast({ variant: "destructive", title: "Deposit Failed", description: e.shortMessage || e.message });
+        toast({ variant: "destructive", title: "Ошибка депозита", description: e.shortMessage || e.message });
     } finally {
         setLoadingState('deposit', false);
     }
   };
 
   const withdraw = async (amount: number) => {
-    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid Amount" });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
     await handleTransaction('withdraw', 'withdraw', [parseEther(amount.toString())]);
   };
 
   const withdrawAll = async () => {
-    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "No balance to withdraw" });
+    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "Нет баланса для вывода" });
     await handleTransaction('withdrawAll', 'withdrawAll', []);
   };
 

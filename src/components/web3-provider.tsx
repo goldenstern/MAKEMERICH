@@ -2,15 +2,31 @@
 
 import * as React from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { mainnet, sepolia, defineChain } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Web3Context, useWeb3Provider } from "@/hooks/use-web3";
 
+// Получаем переменные окружения
+const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111', 10);
+const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.sepolia.org';
+
+// Определяем кастомную сеть, если она не является стандартной
+const customChain = defineChain({
+  id: chainId,
+  name: 'Custom Network',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: [rpcUrl] },
+  },
+});
+
+// Выбираем сеть
+const selectedChain = chainId === mainnet.id ? mainnet : chainId === sepolia.id ? sepolia : customChain;
+
 const config = createConfig({
-  chains: [mainnet, sepolia],
+  chains: [selectedChain],
   transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
+    [selectedChain.id]: http(),
   },
 });
 
