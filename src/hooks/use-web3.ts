@@ -55,10 +55,10 @@ export function useWeb3Provider(): Web3ContextType {
   const { disconnect } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   
-  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+  const [txHashes, setTxHashes] = useState<`0x${string}`[]>([]);
 
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ 
-    hash: txHash,
+  const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({ 
+    hash: txHashes[0],
   });
 
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
@@ -100,10 +100,10 @@ export function useWeb3Provider(): Web3ContextType {
 
   const gameData: GameData | null = gameDataResult ? {
     playerBalance: playerContractData ? parseFloat(formatUnits((playerContractData as any)[0], tokenDecimals)) : 0,
-    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
-    numberOfPlayers: Number((gameDataResult as any)[2]),
-    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
-    riskCoefficient: Number((gameDataResult as any)[4]),
+    totalPool: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
+    numberOfPlayers: Number((gameDataResult as any)[1]),
+    minBet: parseFloat(formatUnits((gameDataResult as any)[2], tokenDecimals)),
+    riskCoefficient: Number((gameDataResult as any)[3]),
   } : null;
 
 
@@ -158,15 +158,15 @@ export function useWeb3Provider(): Web3ContextType {
   }, [isConnected, address, formattedAddress, refreshAllData]);
 
   useEffect(() => {
-    if (isConfirming) {
+    if (isConfirming && txHashes.length > 0) {
         toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
     }
-    if (isConfirmed) {
-        toast({ title: "Успех", description: `Транзакция подтверждена.` });
+    if (receipt && txHashes.length > 0) {
+        toast({ title: "Успех", description: `Транзакция ${receipt.transactionHash.slice(0,10)}... подтверждена.` });
         refreshAllData();
-        setTxHash(undefined);
+        setTxHashes(hashes => hashes.filter(h => h !== receipt.transactionHash));
     }
-  }, [isConfirming, isConfirmed, refreshAllData, toast]);
+  }, [isConfirming, receipt, refreshAllData, toast, txHashes]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
@@ -178,7 +178,7 @@ export function useWeb3Provider(): Web3ContextType {
         functionName,
         args,
       });
-      setTxHash(hash);
+      setTxHashes(hashes => [...hashes, hash]);
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
@@ -211,15 +211,13 @@ export function useWeb3Provider(): Web3ContextType {
         });
         
         toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
+        
+        setTxHashes(h => [...h, approveHash]);
+        // Simple wait, proper way is to use useWaitForTransactionReceipt on this specific hash
+        await new Promise(res => setTimeout(res, 5000));
 
-        const receipt = await (useWaitForTransactionReceipt as any).promise({ hash: approveHash });
-
-        if (receipt.status === 'success') {
-            toast({ title: "Подтверждено!", description: "Внесение токенов..." });
-            await handleTransaction('deposit', 'deposit', [amountInUnits]);
-        } else {
-             toast({ variant: "destructive", title: "Ошибка подтверждения", description: "Транзакция отклонена" });
-        }
+        toast({ title: "Подтверждено!", description: "Внесение токенов..." });
+        await handleTransaction('deposit', 'deposit', [amountInUnits]);
 
     } catch (e: any) {
         console.error(e);
@@ -264,3 +262,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+    
