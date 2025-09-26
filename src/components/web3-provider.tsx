@@ -16,14 +16,22 @@ const config = createConfig({
 
 const queryClient = new QueryClient();
 
-export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
+const Web3ProviderContent = ({ children }: { children: React.ReactNode }) => {
     const value = useWeb3Provider();
+    return (
+        <Web3Context.Provider value={value}>
+            {children}
+        </Web3Context.Provider>
+    );
+}
+
+export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     return (
         <WagmiProvider config={config}>
             <QueryClientProvider client={queryClient}>
-                <Web3Context.Provider value={value}>
+                <Web3ProviderContent>
                     {children}
-                </Web3Context.Provider>
+                </Web3ProviderContent>
             </QueryClientProvider>
         </WagmiProvider>
     );
