@@ -99,18 +99,14 @@ export function useWeb3Provider(): Web3ContextType {
 
   useEffect(() => {
     if (isConnected && address) {
-        console.log("--- START DIAGNOSTIC LOG ---");
-        console.log("Wallet connected, refetching data...");
-        console.log("--- RAW getGameData Response ---");
+        console.log("--- DEBUG: Game Data ---");
         console.log("Is Loading:", isGameDataLoading);
         console.log("Is Error:", isError);
         if (isError) {
             console.error("Error fetching getGameData:", error);
         }
-        console.log("Raw Data Result:", gameDataResult);
-        console.log("--- Parsed gameData Object ---");
+        console.log("Raw Data:", gameDataResult);
         console.log("Parsed Data:", gameData);
-        console.log("--- END DIAGNOSTIC LOG ---");
     }
   }, [gameDataResult, isGameDataLoading, isError, error, gameData, isConnected, address]);
 
