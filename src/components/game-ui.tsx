@@ -31,7 +31,7 @@ const Header = () => {
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-2">
         <span className="text-primary text-3xl font-bold">⨻</span>
-        <h1 className="text-xl font-bold font-headline">MakeMeRich Game</h1>
+        <h1 className="text-xl font-bold font-headline">MakeMeRich, GoldenStern!</h1>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
