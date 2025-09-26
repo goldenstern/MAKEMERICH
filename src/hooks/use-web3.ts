@@ -58,7 +58,7 @@ export function useWeb3Provider(): Web3ContextType {
   const [txHashes, setTxHashes] = useState<`0x${string}`[]>([]);
 
   const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({ 
-    hash: txHashes[0],
+    hash: txHashes.length > 0 ? txHashes[txHashes.length - 1] : undefined,
   });
 
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
@@ -83,29 +83,19 @@ export function useWeb3Provider(): Web3ContextType {
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
+    args: address ? [address] : undefined,
     query: {
-        enabled: isConnected,
+        enabled: isConnected && !!address,
     }
   });
 
-  const { data: playerContractData, isLoading: isPlayerBalanceLoading, refetch: refetchPlayerBalance } = useReadContract({
-      abi: gameABI,
-      address: contractAddress,
-      functionName: 'players',
-      args: address ? [address] : undefined,
-      query: {
-          enabled: isConnected && !!address,
-      }
-  });
-
   const gameData: GameData | null = gameDataResult ? {
-    playerBalance: playerContractData ? parseFloat(formatUnits((playerContractData as any)[0], tokenDecimals)) : 0,
-    totalPool: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
-    numberOfPlayers: Number((gameDataResult as any)[1]),
-    minBet: parseFloat(formatUnits((gameDataResult as any)[2], tokenDecimals)),
-    riskCoefficient: Number((gameDataResult as any)[3]),
+    playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
+    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
+    numberOfPlayers: Number((gameDataResult as any)[2]),
+    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
+    riskCoefficient: Number((gameDataResult as any)[4]),
   } : null;
-
 
   useEffect(() => {
     console.log("--- DEBUG: Token Balance ---");
@@ -139,8 +129,7 @@ export function useWeb3Provider(): Web3ContextType {
   const refreshAllData = useCallback(() => {
     refetchGameData();
     refetchTokenBalance();
-    refetchPlayerBalance();
-  }, [refetchGameData, refetchTokenBalance, refetchPlayerBalance]);
+  }, [refetchGameData, refetchTokenBalance]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -155,18 +144,22 @@ export function useWeb3Provider(): Web3ContextType {
             title: "Кошелек отключен",
         });
     }
-  }, [isConnected, address, formattedAddress, refreshAllData]);
+  }, [isConnected, address, formattedAddress, refreshAllData, toast]);
+
+  useEffect(() => {
+      if (receipt) {
+          toast({ title: "Успех", description: `Транзакция ${receipt.transactionHash.slice(0,10)}... подтверждена.` });
+          refreshAllData();
+          // Clear the processed hash
+          setTxHashes(hashes => hashes.filter(h => h !== receipt.transactionHash));
+      }
+  }, [receipt, refreshAllData, toast]);
 
   useEffect(() => {
     if (isConfirming && txHashes.length > 0) {
-        toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
+      toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
     }
-    if (receipt && txHashes.length > 0) {
-        toast({ title: "Успех", description: `Транзакция ${receipt.transactionHash.slice(0,10)}... подтверждена.` });
-        refreshAllData();
-        setTxHashes(hashes => hashes.filter(h => h !== receipt.transactionHash));
-    }
-  }, [isConfirming, receipt, refreshAllData, toast, txHashes]);
+  }, [isConfirming, txHashes.length, toast]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
@@ -182,10 +175,21 @@ export function useWeb3Provider(): Web3ContextType {
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
-    } finally {
-      setLoadingState(action, false);
+      setLoadingState(action, false); // Turn off loading only on error
     }
+    // Loading state will be turned off by the receipt useEffect
   };
+  
+   useEffect(() => {
+    if (!isConfirming) {
+      Object.keys(actionLoading).forEach(key => {
+        if (actionLoading[key]) {
+          setLoadingState(key, false);
+        }
+      });
+    }
+  }, [isConfirming]);
+
 
   const deposit = async (amount: number) => {
     if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
@@ -212,18 +216,31 @@ export function useWeb3Provider(): Web3ContextType {
         
         toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
         
-        setTxHashes(h => [...h, approveHash]);
-        // Simple wait, proper way is to use useWaitForTransactionReceipt on this specific hash
-        await new Promise(res => setTimeout(res, 5000));
+        const approveReceipt = await new Promise((resolve, reject) => {
+          const unwatch = useWaitForTransactionReceipt({ hash: approveHash });
+          // This is a simplified waiter, in a real app you'd want a more robust listener
+          const interval = setInterval(() => {
+            if (unwatch.data) {
+              clearInterval(interval);
+              resolve(unwatch.data);
+            }
+            if (unwatch.isError) {
+              clearInterval(interval);
+              reject(unwatch.error);
+            }
+          }, 1000);
+        });
 
-        toast({ title: "Подтверждено!", description: "Внесение токенов..." });
-        await handleTransaction('deposit', 'deposit', [amountInUnits]);
-
+        if (approveReceipt) {
+            toast({ title: "Подтверждено!", description: "Внесение токенов..." });
+            await handleTransaction('deposit', 'deposit', [amountInUnits]);
+        } else {
+             throw new Error("Approve transaction failed");
+        }
     } catch (e: any) {
         console.error(e);
         toast({ variant: "destructive", title: "Ошибка депозита", description: e.shortMessage || e.message });
-    } finally {
-       setLoadingState('deposit', false);
+        setLoadingState('deposit', false);
     }
   };
 
@@ -250,7 +267,7 @@ export function useWeb3Provider(): Web3ContextType {
     tokenBalance,
     tokenSymbol: tokenBalanceData?.symbol,
     gameData,
-    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading || isPlayerBalanceLoading)),
+    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading)),
     actionLoading,
     connectWallet,
     disconnectWallet,
@@ -262,5 +279,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
-    
