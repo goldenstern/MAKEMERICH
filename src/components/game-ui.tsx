@@ -21,6 +21,11 @@ type AmountFormValues = z.infer<typeof amountSchema>;
 
 const Header = () => {
   const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading } = useWeb3();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <header className="flex items-center justify-between p-4 border-b">
@@ -28,7 +33,7 @@ const Header = () => {
         <Gem className="text-primary h-6 w-6" />
         <h1 className="text-xl font-bold font-headline">MakeMeRich Game</h1>
       </div>
-      {isConnected ? (
+      {isClient && isConnected ? (
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground hidden sm:block">
             {formattedAddress}
@@ -37,7 +42,7 @@ const Header = () => {
             <LogOut className="mr-2 h-4 w-4" /> Disconnect
           </Button>
         </div>
-      ) : (
+      ) : isClient ? (
         <Button onClick={connectWallet} disabled={isLoading}>
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -46,6 +51,8 @@ const Header = () => {
           )}
           Connect Wallet
         </Button>
+      ) : (
+         <Skeleton className="h-10 w-40" />
       )}
     </header>
   );
@@ -217,11 +224,20 @@ const Dashboard = () => {
 
 export default function GameUI() {
   const { isConnected } = useWeb3();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      {isConnected ? <Dashboard /> : <ConnectWalletView />}
+      {isClient ? (
+        isConnected ? <Dashboard /> : <ConnectWalletView />
+      ) : (
+        <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
+      )}
     </div>
   );
 }
