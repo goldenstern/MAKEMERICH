@@ -62,23 +62,23 @@ export function useWeb3Provider(): Web3ContextType {
 
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
-  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading, isError: isTokenBalanceError, error: tokenBalanceError } = useBalance({
+  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
     token: tokenAddress,
     query: {
-        enabled: !!address,
+        enabled: isConnected && !!address,
     }
   });
 
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenBalanceData.decimals) : "0";
   
-  const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError: isGameDataError, error: gameDataError } = useReadContract({
+  const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
-    args: [address!],
+    args: address ? [address] : undefined,
     query: {
-        enabled: !!address && address.startsWith('0x'),
+        enabled: isConnected && !!address && address.startsWith('0x'),
     }
   });
 
@@ -94,26 +94,22 @@ export function useWeb3Provider(): Web3ContextType {
   useEffect(() => {
     console.log("--- DEBUG: Token Balance ---");
     console.log("Is Loading:", isTokenBalanceLoading);
-    console.log("Is Error:", isTokenBalanceError);
-    if (isTokenBalanceError) {
-        console.error("Token Balance Error:", tokenBalanceError);
-    }
     console.log("Raw Data:", tokenBalanceData);
     console.log("Parsed Balance:", tokenBalance);
     console.log("--------------------------");
-  }, [tokenBalanceData, isTokenBalanceLoading, isTokenBalanceError, tokenBalanceError, tokenBalance]);
+  }, [tokenBalanceData, isTokenBalanceLoading, tokenBalance]);
 
   useEffect(() => {
     console.log("--- DEBUG: Game Data ---");
     console.log("Is Loading:", isGameDataLoading);
-    console.log("Is Error:", isGameDataError);
-    if (isGameDataError) {
-        console.error("Game Data Error:", gameDataError);
+    console.log("Is Error:", isError);
+    if (isError) {
+        console.error("Game Data Error:", error);
     }
     console.log("Raw Data:", gameDataResult);
     console.log("Parsed Data:", gameData);
     console.log("------------------------");
-  }, [gameDataResult, isGameDataLoading, isGameDataError, gameDataError, gameData]);
+  }, [gameDataResult, isGameDataLoading, isError, error, gameData]);
 
 
   const connectWallet = () => {
@@ -138,7 +134,7 @@ export function useWeb3Provider(): Web3ContextType {
             title: "Кошелек отключен",
         });
     }
-  }, [isConnected, address, formattedAddress, refetchGameData, refetchTokenBalance, toast]);
+  }, [isConnected, address]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
@@ -223,7 +219,7 @@ export function useWeb3Provider(): Web3ContextType {
     tokenBalance,
     tokenSymbol: tokenBalanceData?.symbol,
     gameData,
-    isLoading: isConnecting || (isConnected && isGameDataLoading),
+    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading)),
     actionLoading,
     connectWallet,
     disconnectWallet,
