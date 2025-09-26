@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
-interface GameData {
+export interface GameData {
   playerBalance: number;
   totalPool: number;
   numberOfPlayers: number;
@@ -11,7 +11,7 @@ interface GameData {
   riskCoefficient: number;
 }
 
-interface Web3ContextType {
+export interface Web3ContextType {
   isConnected: boolean;
   address: string | null;
   formattedAddress: string | null;
@@ -29,9 +29,17 @@ interface Web3ContextType {
   tokenAddress?: string;
 }
 
-const Web3Context = createContext<Web3ContextType | undefined>(undefined);
+export const Web3Context = createContext<Web3ContextType | undefined>(undefined);
 
-export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
+export const useWeb3 = () => {
+  const context = useContext(Web3Context);
+  if (context === undefined) {
+    throw new Error('useWeb3 must be used within a Web3Provider');
+  }
+  return context;
+};
+
+export function useWeb3Provider() {
   const { toast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
@@ -165,7 +173,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     setLoadingState('makeMeRich', false);
   };
 
-  const value = {
+  return {
     isConnected,
     address,
     formattedAddress,
@@ -182,25 +190,4 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
     tokenAddress: process.env.NEXT_PUBLIC_TOKEN_ADDRESS
   };
-
-  return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
-}
-
-export const useWeb3 = () => {
-  const context = useContext(Web3Context);
-  if (context === undefined) {
-    throw new Error('useWeb3 must be used within a Web3Provider');
-  }
-  return context;
-};
-
-// Wrap the GameUI with this provider
-import GameUIComponent from '@/components/game-ui';
-
-export default function GameUI() {
-    return (
-        <Web3Provider>
-            <GameUIComponent />
-        </Web3Provider>
-    )
 }
