@@ -99,15 +99,18 @@ export function useWeb3Provider(): Web3ContextType {
 
   useEffect(() => {
     if (isConnected && address) {
-        console.log("--- DEBUG: Game Data ---");
+        console.log("--- START DIAGNOSTIC LOG ---");
+        console.log("Wallet connected, refetching data...");
+        console.log("--- RAW getGameData Response ---");
         console.log("Is Loading:", isGameDataLoading);
         console.log("Is Error:", isError);
         if (isError) {
-            console.error("Game Data Error:", error);
+            console.error("Error fetching getGameData:", error);
         }
-        console.log("Raw Data:", gameDataResult);
+        console.log("Raw Data Result:", gameDataResult);
+        console.log("--- Parsed gameData Object ---");
         console.log("Parsed Data:", gameData);
-        console.log("------------------------");
+        console.log("--- END DIAGNOSTIC LOG ---");
     }
   }, [gameDataResult, isGameDataLoading, isError, error, gameData, isConnected, address]);
 
@@ -126,7 +129,7 @@ export function useWeb3Provider(): Web3ContextType {
         title: "Кошелек подключен",
         description: `Добро пожаловать, ${formattedAddress}`,
       });
-      console.log("Wallet connected, refetching data...");
+      console.log("Wallet connected, initiating data refetch...");
       refetchGameData();
       refetchTokenBalance();
     } else if (!isConnected) {
