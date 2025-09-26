@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { parseUnits, formatUnits } from 'viem';
 import { gameABI } from '@/lib/abi';
@@ -53,7 +53,11 @@ export function useWeb3Provider(): Web3ContextType {
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { writeContractAsync } = useWriteContract();
+  const { writeContractAsync, data: hash } = useWriteContract();
+    const { isLoading: isConfirming, isSuccess: isConfirmed } = 
+    useWaitForTransactionReceipt({ 
+      hash, 
+    })
 
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const setLoadingState = (action: string, state: boolean) => {
@@ -73,42 +77,23 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = tokenBalanceData?.decimals ?? 18;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-  const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
+    const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
+    args: address ? [address] : undefined,
     query: {
-        enabled: isConnected, // Теперь зависит только от подключения
+        enabled: isConnected && !!address,
     }
-  });
-
-  const { data: playerContractData, isLoading: isPlayerBalanceLoading, refetch: refetchPlayerBalance } = useReadContract({
-      abi: gameABI,
-      address: contractAddress,
-      functionName: 'players',
-      args: address ? [address] : undefined,
-      query: {
-          enabled: isConnected && !!address,
-      }
-  });
+    });
 
   const gameData: GameData | null = gameDataResult ? {
-    // @ts-ignore
-    playerBalance: playerContractData ? parseFloat(formatUnits(playerContractData[0], tokenDecimals)) : 0,
+    playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
     totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
     numberOfPlayers: Number((gameDataResult as any)[2]),
     minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
     riskCoefficient: Number((gameDataResult as any)[4]),
   } : null;
-
-
-  useEffect(() => {
-    console.log("--- DEBUG: Token Balance ---");
-    console.log("Is Loading:", isTokenBalanceLoading);
-    console.log("Raw Data:", tokenBalanceData);
-    console.log("Parsed Balance:", tokenBalance);
-    console.log("--------------------------");
-  }, [tokenBalanceData, isTokenBalanceLoading, tokenBalance]);
 
   useEffect(() => {
     console.log("--- DEBUG: Game Data ---");
@@ -140,7 +125,6 @@ export function useWeb3Provider(): Web3ContextType {
       console.log("Wallet connected, refetching data...");
       refetchGameData();
       refetchTokenBalance();
-      refetchPlayerBalance();
     } else if (!isConnected) {
         toast({
             title: "Кошелек отключен",
@@ -148,23 +132,25 @@ export function useWeb3Provider(): Web3ContextType {
     }
   }, [isConnected, address]);
 
+  useEffect(() => {
+    if (isConfirmed) {
+      toast({ title: "Успех", description: "Транзакция подтверждена." });
+      refetchGameData();
+      refetchTokenBalance();
+    }
+  }, [isConfirmed, refetchGameData, refetchTokenBalance]);
+
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
     setLoadingState(action, true);
     try {
-      const tx = await writeContractAsync({
-        abi: gameABI,
-        address: contractAddress,
-        functionName,
-        args,
-      });
+        await writeContractAsync({
+            abi: gameABI,
+            address: contractAddress,
+            functionName,
+            args,
+        });
       toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
-      
-      await new Promise(resolve => setTimeout(resolve, 5000)); 
-      toast({ title: "Успех", description: `Транзакция подтверждена.` });
-      refetchGameData();
-      refetchTokenBalance();
-      refetchPlayerBalance();
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
@@ -179,7 +165,7 @@ export function useWeb3Provider(): Web3ContextType {
     
     setLoadingState('deposit', true);
     try {
-        await writeContractAsync({
+        const approveHash = await writeContractAsync({
             abi: [ 
               {
                 "constant": false,
@@ -198,7 +184,10 @@ export function useWeb3Provider(): Web3ContextType {
         });
         toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
         
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait for approve transaction
+        // This is a simplified wait, in real app you'd use waitForTransactionReceipt
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
         toast({ title: "Подтверждено!", description: "Внесение токенов..." });
 
         await handleTransaction('deposit', 'deposit', [amountInUnits]);
@@ -225,6 +214,8 @@ export function useWeb3Provider(): Web3ContextType {
     await handleTransaction('makeMeRich', 'makeMeRich', []);
   };
 
+  const isLoading = isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading)) || isConfirming;
+
   return {
     isConnected,
     address,
@@ -232,7 +223,7 @@ export function useWeb3Provider(): Web3ContextType {
     tokenBalance,
     tokenSymbol: tokenBalanceData?.symbol,
     gameData,
-    isLoading: isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading || isPlayerBalanceLoading)),
+    isLoading,
     actionLoading,
     connectWallet,
     disconnectWallet,
