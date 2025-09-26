@@ -81,7 +81,7 @@ export function useWeb3Provider(): Web3ContextType {
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
-    args: address ? [address] : undefined,
+    args: undefined,
     query: {
         enabled: isConnected && !!address,
         refetchOnWindowFocus: true,
