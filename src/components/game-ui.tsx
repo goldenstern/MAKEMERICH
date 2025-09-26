@@ -92,7 +92,7 @@ const ConnectWalletView = () => {
 };
 
 const Dashboard = () => {
-  const { gameData, tokenBalance, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading } = useWeb3();
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading } = useWeb3();
 
   const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
@@ -106,6 +106,12 @@ const Dashboard = () => {
     withdraw(data.amount);
     withdrawForm.reset();
   };
+  
+  const formattedTokenBalance = parseFloat(tokenBalance).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
@@ -124,10 +130,12 @@ const Dashboard = () => {
                     <CardDescription>Your available token balance.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold">{tokenBalance.toLocaleString()}</span>
-                        <span className="text-muted-foreground">Tokens</span>
-                    </div>
+                     {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-bold">{formattedTokenBalance}</span>
+                            <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
+                        </div>
+                     }
                 </CardContent>
             </Card>
             <Card>
@@ -145,7 +153,7 @@ const Dashboard = () => {
                                     <FormItem>
                                         <FormLabel className="sr-only">Amount</FormLabel>
                                         <FormControl>
-                                            <Input type="number" placeholder="Amount to deposit" {...field} />
+                                            <Input type="number" placeholder="Amount to deposit" {...field} step="any" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -171,7 +179,7 @@ const Dashboard = () => {
                 <div className="flex items-baseline gap-2">
                     {isLoading ? <Skeleton className="h-10 w-1/2" /> :
                       <><span className="text-4xl font-bold">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
-                      <span className="text-muted-foreground">Tokens</span></>
+                      <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
                     }
                 </div>
                  <Form {...withdrawForm}>
@@ -183,7 +191,7 @@ const Dashboard = () => {
                                 <FormItem>
                                     <FormLabel className="sr-only">Amount</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="Amount to withdraw" {...field} />
+                                        <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -207,7 +215,7 @@ const Dashboard = () => {
 
        <div className="text-center pt-8">
             <h3 className="text-2xl font-bold font-headline mb-4">Ready to Play?</h3>
-            <Button size="lg" className="h-16 text-2xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform" onClick={makeMeRich} disabled={actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
+            <Button size="lg" className="h-16 text-2xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
                 {actionLoading['makeMeRich'] ? (
                   <Loader2 className="mr-2 h-8 w-8 animate-spin" />
                 ) : (
@@ -241,3 +249,5 @@ export default function GameUI() {
     </div>
   );
 }
+
+    

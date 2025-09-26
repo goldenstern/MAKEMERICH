@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { parseEther, formatEther } from 'ethers';
+import { parseEther, formatUnits, formatEther } from 'viem';
 import { gameABI } from '@/lib/abi';
 
 export interface GameData {
@@ -19,7 +19,8 @@ export interface Web3ContextType {
   isConnected: boolean;
   address: `0x${string}` | undefined;
   formattedAddress: string | null;
-  tokenBalance: number;
+  tokenBalance: string;
+  tokenSymbol: string | undefined;
   gameData: GameData | null;
   isLoading: boolean;
   actionLoading: Record<string, boolean>;
@@ -69,7 +70,7 @@ export function useWeb3Provider(): Web3ContextType {
     }
   });
 
-  const tokenBalance = tokenBalanceData ? parseFloat(formatEther(tokenBalanceData.value)) : 0;
+  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenBalanceData.decimals) : "0";
   
   const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError: isGameDataError, error: gameDataError } = useReadContract({
     abi: gameABI,
@@ -220,6 +221,7 @@ export function useWeb3Provider(): Web3ContextType {
     address,
     formattedAddress,
     tokenBalance,
+    tokenSymbol: tokenBalanceData?.symbol,
     gameData,
     isLoading: isConnecting || (isConnected && isGameDataLoading),
     actionLoading,
@@ -233,3 +235,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+    
