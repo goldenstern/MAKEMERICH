@@ -4,7 +4,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDownRight, Loader2, LogOut, PiggyBank, Scaling, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, Scaling, Users, Wallet } from "lucide-react";
 
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
@@ -29,9 +29,15 @@ const Header = () => {
 
   return (
     <header className="flex items-center justify-between p-4 border-b">
-      <div className="flex items-center gap-2">
-        <span className="text-primary text-3xl font-bold">⨻</span>
-        <h1 className="text-xl font-bold font-headline">MakeMeRich, GoldenStern!</h1>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+            <span className="text-primary text-3xl font-bold">⨻</span>
+            <h1 className="text-xl font-bold font-headline">MakeMeRich, GoldenStern!</h1>
+        </div>
+        <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link className="h-4 w-4" />
+            Visit Metaverse Portal
+        </a>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
