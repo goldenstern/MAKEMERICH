@@ -22,6 +22,56 @@ type AmountFormValues = z.infer<typeof amountSchema>;
 
 const REFRESH_INTERVAL = 30; // in seconds
 
+// A component for the confetti effect
+const Confetti = ({ onComplete }: { onComplete: () => void }) => {
+  const [triangles, setTriangles] = React.useState<JSX.Element[]>([]);
+
+  React.useEffect(() => {
+    const newTriangles = Array.from({ length: 100 }).map((_, i) => {
+      const style: React.CSSProperties = {
+        position: 'fixed',
+        left: '50%',
+        top: '50%',
+        transform: `translate(-50%, -50%) rotate(${Math.random() * 360}deg)`,
+        animation: `fly-${i} 3s ease-out forwards`,
+        zIndex: 1000,
+      };
+      const keyframes = `
+        @keyframes fly-${i} {
+          0% {
+            transform: translate(-50%, -50%) rotate(${Math.random() * 360}deg) scale(0.5);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(calc(-50% + ${Math.random() * 200 - 100}vw), calc(-50% + ${Math.random() * 200 - 100}vh)) rotate(${Math.random() * 1000 - 500}deg) scale(1.5);
+            opacity: 0;
+          }
+        }
+      `;
+      return (
+        <React.Fragment key={i}>
+          <style>{keyframes}</style>
+          <div style={style}>
+            <svg width="20" height="20" viewBox="0 0 10 10">
+              <polygon points="5,0 10,10 0,10" fill="gold" />
+            </svg>
+          </div>
+        </React.Fragment>
+      );
+    });
+    setTriangles(newTriangles);
+
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return <>{triangles}</>;
+};
+
+
 const RefreshTimer = () => {
     const { isDataFetching, refreshData } = useWeb3();
     const [countdown, setCountdown] = React.useState(REFRESH_INTERVAL);
@@ -33,12 +83,18 @@ const RefreshTimer = () => {
         } else {
             setCountdown(REFRESH_INTERVAL);
             timer = setInterval(() => {
-                setCountdown(prev => (prev > 0 ? prev - 1 : REFRESH_INTERVAL));
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        refreshData();
+                        return REFRESH_INTERVAL;
+                    }
+                    return prev - 1;
+                });
             }, 1000);
         }
 
         return () => clearInterval(timer);
-    }, [isDataFetching]);
+    }, [isDataFetching, refreshData]);
 
     const handleRefresh = () => {
       if (!isDataFetching) {
@@ -50,7 +106,7 @@ const RefreshTimer = () => {
         <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
              <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
              <span>
-                {isDataFetching ? 'Updating...' : `${countdown}s`}
+                {isDataFetching ? '' : `${countdown}s`}
              </span>
         </button>
     );
@@ -163,7 +219,7 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Bet (24h)" value={gameData?.minBet ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+        <StatCard icon={ArrowDownRight} title="Minimum Bet (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
@@ -283,7 +339,7 @@ const Dashboard = () => {
                   "MakeMeRich, GoldenStern!"
                 )}
             </Button>
-             {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) &&
+             {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading &&
                 <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
              }
         </div>
@@ -292,22 +348,43 @@ const Dashboard = () => {
 };
 
 export default function GameUI() {
-  const { isConnected, isDataFetching } = useWeb3();
+  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, gameData } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
+  const [showConfetti, setShowConfetti] = React.useState(false);
 
   React.useEffect(() => {
     setIsClient(true);
   }, []);
 
+  const prevPlayerBalance = React.useRef<number | undefined>();
+
+  React.useEffect(() => {
+    if (transactionStatus.action === 'makeMeRich' && transactionStatus.status === 'confirmed') {
+        const currentBalance = gameData?.playerBalance ?? 0;
+        const previousBalance = prevPlayerBalance.current ?? 0;
+
+        if (currentBalance > previousBalance) {
+             setShowConfetti(true);
+        }
+        clearTransactionStatus();
+    }
+    if (gameData) {
+       prevPlayerBalance.current = gameData.playerBalance;
+    }
+
+  }, [transactionStatus, clearTransactionStatus, gameData]);
+
+
   return (
     <div className="min-h-screen bg-background">
+      {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
       <Header />
       {isClient ? (
         isConnected ? <Dashboard /> : <ConnectWalletView />
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
       )}
-       {isClient && isDataFetching && !isConnected && (
+       {isClient && isDataFetching && (
             <div className="fixed bottom-4 left-4">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
