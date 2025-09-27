@@ -123,9 +123,9 @@ const Dashboard = () => {
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit="Tokens" />
+        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || 'Tokens'} />
         <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Bet" value={gameData?.minBet ?? 0} isLoading={isLoading} unit="Tokens" />
+        <StatCard icon={ArrowDownRight} title="Minimum Bet" value={gameData?.minBet ?? 0} isLoading={isLoading} unit={tokenSymbol || 'Tokens'} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
@@ -147,13 +147,13 @@ const Dashboard = () => {
                     <div className="space-y-2">
                         <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button size="sm" className="w-full">
+                           <Button variant="default" size="sm" className="w-full">
                                 <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
                            </Button>
-                            <Button size="sm" className="w-full">
+                            <Button variant="default" size="sm" className="w-full">
                                 <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
                             </Button>
-                            <Button size="sm" className="w-full">
+                            <Button variant="default" size="sm" className="w-full">
                                 <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                             </Button>
                         </div>
@@ -272,5 +272,3 @@ export default function GameUI() {
     </div>
   );
 }
-
-    
