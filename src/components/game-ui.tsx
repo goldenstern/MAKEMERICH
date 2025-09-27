@@ -201,7 +201,7 @@ const Dashboard = () => {
                 <div className="flex items-baseline gap-2">
                     {isLoading ? <Skeleton className="h-10 w-1/2" /> :
                       <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
-                      <span className="text-muted-foreground text-primary">{tokenSymbol || 'Tokens'}</span></>
+                      <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
                     }
                 </div>
                  <Form {...withdrawForm}>
