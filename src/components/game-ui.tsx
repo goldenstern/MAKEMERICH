@@ -37,7 +37,7 @@ const Header = () => {
         </div>
         <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Link className="h-4 w-4" />
-            Visit Metaverse Portal
+            Visit AnglVerse Website
         </a>
       </div>
       {isClient && isConnected ? (
@@ -223,7 +223,7 @@ const Dashboard = () => {
                         <div className="flex flex-col sm:flex-row gap-2">
                            <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                               Withdraw Amount
+                               Withdraw
                            </Button>
                            <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
