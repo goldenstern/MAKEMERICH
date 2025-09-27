@@ -238,11 +238,11 @@ const Dashboard = () => {
 
        <div className="text-center pt-8">
             <h3 className="text-2xl font-bold font-headline mb-4">Ready to Play?</h3>
-            <Button size="lg" className="h-16 text-2xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['deposit'] || actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
+            <Button size="lg" className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['deposit'] || actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
                 {actionLoading['makeMeRich'] ? (
                   <Loader2 className="mr-2 h-8 w-8 animate-spin" />
                 ) : (
-                  "MAKE ME RICH!"
+                  "MakeMeRich, GoldenStern!"
                 )}
             </Button>
              {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) &&
