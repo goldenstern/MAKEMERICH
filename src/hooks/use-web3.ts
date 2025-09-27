@@ -119,22 +119,22 @@ export function useWeb3Provider(): Web3ContextType {
     useAccountEffect({
         onConnect: (data) => {
             toast({
-                title: "Кошелек подключен",
-                description: `Добро пожаловать, ${data.address}`,
+                title: "Wallet Connected",
+                description: `Welcome, ${data.address}`,
             });
             refetchGameData();
             refetchTokenBalance();
         },
         onDisconnect: () => {
             toast({
-                title: "Кошелек отключен",
+                title: "Wallet Disconnected",
             });
         },
     });
 
   useEffect(() => {
     if (isConfirmed && transactionStatus.action && transactionStatus.status === 'pending') {
-      toast({ title: "Успех", description: "Транзакция подтверждена." });
+      toast({ title: "Success", description: "Transaction confirmed." });
       setTransactionStatus(prev => ({ ...prev, status: 'confirmed' }));
       refetchGameData();
       refetchTokenBalance();
@@ -158,7 +158,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
     if (!isConnected) {
-        toast({ variant: "destructive", title: "Ошибка", description: "Кошелек не подключен." });
+        toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
     }
     setLoadingState(action, true);
@@ -170,17 +170,17 @@ export function useWeb3Provider(): Web3ContextType {
             functionName,
             args,
         });
-      toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
+      toast({ title: "Transaction Sent", description: "Waiting for confirmation..." });
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
+      toast({ variant: "destructive", title: "Transaction Error", description: e.shortMessage || e.message });
       setLoadingState(action, false); 
       setTransactionStatus({ action, status: 'error' });
     }
   };
 
   const deposit = async (amount: number) => {
-    if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
     setLoadingState('deposit', true);
@@ -204,37 +204,37 @@ export function useWeb3Provider(): Web3ContextType {
             args: [contractAddress, amountInUnits],
         });
 
-        toast({ title: "Подтверждение...", description: "Ожидание подтверждения права на списание." });
+        toast({ title: "Approving...", description: "Waiting for approval confirmation." });
 
         await new Promise(resolve => setTimeout(resolve, 15000));
 
 
-        toast({ title: "Подтверждено!", description: "Внесение токенов..." });
+        toast({ title: "Approved!", description: "Depositing tokens..." });
 
         await handleTransaction('deposit', 'deposit', [amountInUnits]);
 
     } catch (e: any) {
         console.error(e);
-        toast({ variant: "destructive", title: "Ошибка депозита", description: e.shortMessage || e.message });
+        toast({ variant: "destructive", title: "Deposit Error", description: e.shortMessage || e.message });
         setLoadingState('deposit', false);
         setTransactionStatus({ action: 'deposit', status: 'error' });
     }
   };
 
   const withdraw = async (amount: number) => {
-    if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
   };
 
   const withdrawAll = async () => {
-    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "Нет баланса для вывода" });
+    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "No balance to withdraw" });
     await handleTransaction('withdrawAll', 'withdrawAll', []);
   };
 
   const makeMeRich = async () => {
     if (!gameData || gameData.playerBalance < gameData.minBet) {
-        toast({ variant: "destructive", title: "Недостаточно средств", description: `Нужен баланс не менее ${gameData?.minBet} для игры.`});
+        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData?.minBet} to play.`});
         return;
     }
     await handleTransaction('makeMeRich', 'makeMeRich', []);
