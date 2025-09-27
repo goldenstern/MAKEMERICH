@@ -219,7 +219,7 @@ const Dashboard = () => {
                                 </FormItem>
                             )}
                         />
-                         <p className="text-xs text-center text-muted-foreground">A 3% fee applies to all withdrawals.</p>
+                         <p className="text-xs text-center text-muted-foreground">A regular 3% GSCB fee applies to all withdrawals.</p>
                         <div className="flex flex-col sm:flex-row gap-2">
                            <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw']}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
