@@ -31,8 +31,6 @@ const RefreshTimer = () => {
         if (isDataFetching) {
             setCountdown(REFRESH_INTERVAL);
         } else {
-             // Сбрасываем таймер на 30, когда загрузка завершена,
-             // и тут же запускаем новый интервал
             setCountdown(REFRESH_INTERVAL);
             timer = setInterval(() => {
                 setCountdown(prev => (prev > 0 ? prev - 1 : REFRESH_INTERVAL));
@@ -52,7 +50,7 @@ const RefreshTimer = () => {
         <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
              <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
              <span>
-                {isDataFetching ? 'Updating...' : `Update in ${countdown}s`}
+                {isDataFetching ? 'Updating...' : `${countdown}s`}
              </span>
         </button>
     );
@@ -251,7 +249,7 @@ const Dashboard = () => {
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="sr-only">Amount</FormLabel>
+                                    <FormLabel className="sr-only">Withdraw</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
                                     </FormControl>
@@ -294,7 +292,7 @@ const Dashboard = () => {
 };
 
 export default function GameUI() {
-  const { isConnected } = useWeb3();
+  const { isConnected, isDataFetching } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -309,6 +307,11 @@ export default function GameUI() {
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
       )}
+       {isClient && isDataFetching && !isConnected && (
+            <div className="fixed bottom-4 left-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+        )}
     </div>
   );
 }
