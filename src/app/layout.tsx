@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'MakeMeRich Game',
-  description: 'A Web3 game to make you rich!',
+  title: 'MakeMeRich, GoldenStern!',
+  description: 'The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.',
 };
 
 export default function RootLayout({
