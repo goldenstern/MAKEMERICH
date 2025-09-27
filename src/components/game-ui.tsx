@@ -123,9 +123,9 @@ const Dashboard = () => {
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || 'Tokens'} />
+        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Bet" value={gameData?.minBet ?? 0} isLoading={isLoading} unit={tokenSymbol || 'Tokens'} />
+        <StatCard icon={ArrowDownRight} title="Minimum Bet (24h)" value={gameData?.minBet ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
