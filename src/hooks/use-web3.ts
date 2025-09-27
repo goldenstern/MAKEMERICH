@@ -66,11 +66,20 @@ export function useWeb3Provider(): Web3ContextType {
 
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
+  const connectWallet = () => {
+    connect({ connector: injected() });
+  };
+
+  const disconnectWallet = () => {
+      disconnect();
+  };
+
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
     token: tokenAddress,
     query: {
         enabled: isConnected && !!address,
+        refetchInterval: 30000,
     }
   });
   
@@ -86,6 +95,7 @@ export function useWeb3Provider(): Web3ContextType {
     query: {
         enabled: isConnected && !!address,
         queryKey: ['getGameData', address], 
+        refetchInterval: 30000,
     }
     });
 
@@ -99,7 +109,6 @@ export function useWeb3Provider(): Web3ContextType {
 
     useAccountEffect({
         onConnect: (data) => {
-            console.log('Wallet connected, initiating data refetch...');
             toast({
                 title: "Кошелек подключен",
                 description: `Добро пожаловать, ${data.address}`,
@@ -108,39 +117,11 @@ export function useWeb3Provider(): Web3ContextType {
             refetchTokenBalance();
         },
         onDisconnect: () => {
-            console.log('Wallet disconnected');
             toast({
                 title: "Кошелек отключен",
             });
         },
     });
-
-  useEffect(() => {
-    if (isConnected && address) {
-        console.log("--- START DIAGNOSTIC LOG ---");
-        console.log("Wallet connected, refetching data...");
-        console.log("--- RAW getGameData Response ---");
-        console.log("Is Loading:", isGameDataLoading);
-        console.log("Is Error:", isError);
-        if (isError) {
-            console.error("Error fetching getGameData:", error);
-        }
-        console.log("Raw Data Result:", gameDataResult);
-        console.log("--- Parsed gameData Object ---");
-        console.log("Parsed Data:", gameData);
-        console.log("--- END DIAGNOSTIC LOG ---");
-    }
-  }, [gameDataResult, isGameDataLoading, isError, error, gameData, isConnected, address]);
-
-
-  const connectWallet = () => {
-    connect({ connector: injected() });
-  };
-
-  const disconnectWallet = () => {
-    disconnect();
-  };
-
 
   useEffect(() => {
     if (isConfirmed) {
@@ -179,7 +160,7 @@ export function useWeb3Provider(): Web3ContextType {
     
     setLoadingState('deposit', true);
     try {
-        await writeContractAsync({
+        const {data: approveHash} = await writeContractAsync({
             abi: [ 
               {
                 "constant": false,
@@ -196,9 +177,9 @@ export function useWeb3Provider(): Web3ContextType {
             functionName: 'approve',
             args: [contractAddress, amountInUnits],
         });
+
         toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
         
-        // В реальном приложении здесь нужно дождаться подтверждения транзакции approve
         await new Promise(resolve => setTimeout(resolve, 15000)); // Увеличено время ожидания
         
         toast({ title: "Подтверждено!", description: "Внесение токенов..." });
