@@ -37,7 +37,7 @@ const Header = () => {
         </div>
         <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Link className="h-4 w-4" />
-            Visit Metaverse Portal
+            Visit AnglVerse Website
         </a>
       </div>
       {isClient && isConnected ? (
@@ -123,9 +123,9 @@ const Dashboard = () => {
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit="Tokens" />
+        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Bet" value={gameData?.minBet ?? 0} isLoading={isLoading} unit="Tokens" />
+        <StatCard icon={ArrowDownRight} title="Minimum Bet (24h)" value={gameData?.minBet ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
@@ -147,14 +147,14 @@ const Dashboard = () => {
                     <div className="space-y-2">
                         <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button variant="outline" size="sm" asChild className="w-full">
+                           <Button variant="default" size="sm" className="w-full">
                                 <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
                            </Button>
-                            <Button variant="outline" size="sm" asChild className="w-full">
+                            <Button variant="default" size="sm" className="w-full">
                                 <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
                             </Button>
-                            <Button variant="outline" size="sm" asChild className="w-full">
-                                <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">PancakeSwap</a>
+                            <Button variant="default" size="sm" className="w-full">
+                                <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                             </Button>
                         </div>
                     </div>
@@ -219,10 +219,11 @@ const Dashboard = () => {
                                 </FormItem>
                             )}
                         />
+                         <p className="text-xs text-center text-muted-foreground">A regular 3% GSCB fee applies to all withdrawals.</p>
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw']}>
+                           <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                               Withdraw Amount
+                               Withdraw
                            </Button>
                            <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -237,11 +238,11 @@ const Dashboard = () => {
 
        <div className="text-center pt-8">
             <h3 className="text-2xl font-bold font-headline mb-4">Ready to Play?</h3>
-            <Button size="lg" className="h-16 text-2xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
+            <Button size="lg" className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['deposit'] || actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
                 {actionLoading['makeMeRich'] ? (
                   <Loader2 className="mr-2 h-8 w-8 animate-spin" />
                 ) : (
-                  "MAKE ME RICH!"
+                  "MakeMeRich, GoldenStern!"
                 )}
             </Button>
              {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) &&
