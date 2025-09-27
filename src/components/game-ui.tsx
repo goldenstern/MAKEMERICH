@@ -71,6 +71,55 @@ const Confetti = ({ onComplete }: { onComplete: () => void }) => {
   return <>{triangles}</>;
 };
 
+// A component for the losing effect
+const Tears = ({ onComplete }: { onComplete: () => void }) => {
+  const [drops, setDrops] = React.useState<JSX.Element[]>([]);
+
+  React.useEffect(() => {
+    const newDrops = Array.from({ length: 50 }).map((_, i) => {
+      const style: React.CSSProperties = {
+        position: 'fixed',
+        left: `${Math.random() * 100}vw`,
+        top: '-20px',
+        animation: `fall-${i} ${2 + Math.random() * 2}s linear forwards`,
+        animationDelay: `${Math.random() * 2}s`,
+        zIndex: 1000,
+      };
+      const keyframes = `
+        @keyframes fall-${i} {
+          0% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(105vh) scale(1);
+            opacity: 0;
+          }
+        }
+      `;
+      return (
+        <React.Fragment key={i}>
+          <style>{keyframes}</style>
+          <div style={style}>
+             <svg width="15" height="20" viewBox="0 0 15 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7.5 20C11.6421 20 15 15.5228 15 10C15 4.47715 7.5 0 7.5 0C7.5 0 0 4.47715 0 10C0 15.5228 3.35786 20 7.5 20Z" fill="#A4C2F4"/>
+            </svg>
+          </div>
+        </React.Fragment>
+      );
+    });
+    setDrops(newDrops);
+
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 5000); // Animation duration + delay
+
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return <>{drops}</>;
+};
+
 
 const RefreshTimer = () => {
     const { isDataFetching, refreshData } = useWeb3();
@@ -183,7 +232,7 @@ const ConnectWalletView = () => {
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">Connect your Web3 wallet to start playing. The game where you can multiply your tokens or lose them all. High risk, high reward!</p>
+      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The game where you can multiply your tokens or lose them all. High risk, high reward!</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet
@@ -351,6 +400,7 @@ export default function GameUI() {
   const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, gameData } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
+  const [showTears, setShowTears] = React.useState(false);
 
   React.useEffect(() => {
     setIsClient(true);
@@ -370,10 +420,14 @@ export default function GameUI() {
     // This effect runs when gameData changes.
     if (isCheckingWin.current && !isDataFetching && gameData) {
       const currentBalance = gameData.playerBalance;
-      const previousBalance = prevPlayerBalance.current ?? 0;
-
-      if (currentBalance > previousBalance) {
-        setShowConfetti(true);
+      const previousBalance = prevPlayerBalance.current;
+      
+      if (previousBalance !== undefined) {
+          if (currentBalance > previousBalance) {
+            setShowConfetti(true);
+          } else if (currentBalance < previousBalance) {
+            setShowTears(true);
+          }
       }
       
       // Reset flags and clear status
@@ -391,6 +445,7 @@ export default function GameUI() {
   return (
     <div className="min-h-screen bg-background">
       {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
+      {showTears && <Tears onComplete={() => setShowTears(false)} />}
       <Header />
       {isClient ? (
         isConnected ? <Dashboard /> : <ConnectWalletView />
