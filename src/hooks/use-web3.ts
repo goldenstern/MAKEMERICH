@@ -82,7 +82,7 @@ export function useWeb3Provider(): Web3ContextType {
     address: contractAddress,
     functionName: 'getGameData',
     args: [],
-    account: address, // This is the fix!
+    account: address, 
     query: {
         enabled: isConnected && !!address,
         queryKey: ['getGameData', address], 
@@ -94,7 +94,7 @@ export function useWeb3Provider(): Web3ContextType {
     totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
     numberOfPlayers: Number((gameDataResult as any)[2]),
     minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
-    riskCoefficient: Number((gameDataResult as any)[4]),
+    riskCoefficient: 100 - Number((gameDataResult as any)[4]),
   } : null;
 
     useAccountEffect({
