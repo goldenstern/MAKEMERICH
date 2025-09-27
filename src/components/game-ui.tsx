@@ -20,6 +20,43 @@ const amountSchema = z.object({
 
 type AmountFormValues = z.infer<typeof amountSchema>;
 
+const REFRESH_INTERVAL = 30; // in seconds
+
+const RefreshTimer = () => {
+    const { isDataFetching } = useWeb3();
+    const [countdown, setCountdown] = React.useState(REFRESH_INTERVAL);
+
+    React.useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isDataFetching) {
+            setCountdown(REFRESH_INTERVAL);
+        } else {
+            timer = setInterval(() => {
+                setCountdown(prev => (prev > 0 ? prev - 1 : REFRESH_INTERVAL));
+            }, 1000);
+        }
+
+        return () => clearInterval(timer);
+    }, [isDataFetching]);
+    
+    if (isDataFetching) {
+        return (
+            <div className="flex items-center gap-2 text-sm text-primary">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Updating...</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+             <RefreshCw className="h-4 w-4" />
+             <span>Update in {countdown}s</span>
+        </div>
+    );
+};
+
+
 const Header = () => {
   const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
@@ -42,6 +79,7 @@ const Header = () => {
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
+          <RefreshTimer />
           <div className="text-sm text-muted-foreground hidden sm:block">
             {formattedAddress}
           </div>
@@ -254,7 +292,7 @@ const Dashboard = () => {
 };
 
 export default function GameUI() {
-  const { isConnected, isDataFetching, isLoading } = useWeb3();
+  const { isConnected } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -268,13 +306,6 @@ export default function GameUI() {
         isConnected ? <Dashboard /> : <ConnectWalletView />
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
-      )}
-      {isClient && !isLoading && isDataFetching && (
-        <div className="fixed bottom-4 left-4 z-50">
-            <div className="bg-background border border-border rounded-full p-2 shadow-lg">
-                <RefreshCw className="h-5 w-5 animate-spin text-primary" />
-            </div>
-        </div>
       )}
     </div>
   );
