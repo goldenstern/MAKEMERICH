@@ -147,13 +147,13 @@ const Dashboard = () => {
                     <div className="space-y-2">
                         <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button size="sm" asChild className="w-full">
+                           <Button size="sm" className="w-full">
                                 <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
                            </Button>
-                            <Button size="sm" asChild className="w-full">
+                            <Button size="sm" className="w-full">
                                 <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
                             </Button>
-                            <Button size="sm" asChild className="w-full">
+                            <Button size="sm" className="w-full">
                                 <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                             </Button>
                         </div>
@@ -221,7 +221,7 @@ const Dashboard = () => {
                         />
                          <p className="text-xs text-center text-muted-foreground">A regular 3% GSCB fee applies to all withdrawals.</p>
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw']}>
+                           <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Withdraw Amount
                            </Button>
@@ -272,3 +272,5 @@ export default function GameUI() {
     </div>
   );
 }
+
+    
