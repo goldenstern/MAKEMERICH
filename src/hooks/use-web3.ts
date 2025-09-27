@@ -31,6 +31,7 @@ export interface Web3ContextType {
   withdraw: (amount: number) => Promise<void>;
   withdrawAll: () => Promise<void>;
   makeMeRich: () => Promise<void>;
+  refreshData: () => void;
   contractAddress?: string;
   tokenAddress?: string;
 }
@@ -134,6 +135,11 @@ export function useWeb3Provider(): Web3ContextType {
     }
   }, [isConfirmed, refetchGameData, refetchTokenBalance, toast]);
 
+  const refreshData = useCallback(() => {
+    refetchGameData();
+    refetchTokenBalance();
+  }, [refetchGameData, refetchTokenBalance]);
+
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
     if (!isConnected) {
@@ -235,6 +241,7 @@ export function useWeb3Provider(): Web3ContextType {
     withdraw,
     withdrawAll,
     makeMeRich,
+    refreshData,
     contractAddress,
     tokenAddress
   };

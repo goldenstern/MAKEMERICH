@@ -23,7 +23,7 @@ type AmountFormValues = z.infer<typeof amountSchema>;
 const REFRESH_INTERVAL = 30; // in seconds
 
 const RefreshTimer = () => {
-    const { isDataFetching } = useWeb3();
+    const { isDataFetching, refreshData } = useWeb3();
     const [countdown, setCountdown] = React.useState(REFRESH_INTERVAL);
 
     React.useEffect(() => {
@@ -31,6 +31,9 @@ const RefreshTimer = () => {
         if (isDataFetching) {
             setCountdown(REFRESH_INTERVAL);
         } else {
+             // Сбрасываем таймер на 30, когда загрузка завершена,
+             // и тут же запускаем новый интервал
+            setCountdown(REFRESH_INTERVAL);
             timer = setInterval(() => {
                 setCountdown(prev => (prev > 0 ? prev - 1 : REFRESH_INTERVAL));
             }, 1000);
@@ -38,21 +41,20 @@ const RefreshTimer = () => {
 
         return () => clearInterval(timer);
     }, [isDataFetching]);
-    
-    if (isDataFetching) {
-        return (
-            <div className="flex items-center gap-2 text-sm text-primary">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                <span>Updating...</span>
-            </div>
-        );
-    }
 
+    const handleRefresh = () => {
+      if (!isDataFetching) {
+        refreshData();
+      }
+    }
+    
     return (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-             <RefreshCw className="h-4 w-4" />
-             <span>Update in {countdown}s</span>
-        </div>
+        <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
+             <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
+             <span>
+                {isDataFetching ? 'Updating...' : `Update in ${countdown}s`}
+             </span>
+        </button>
     );
 };
 
@@ -186,7 +188,7 @@ const Dashboard = () => {
                         <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
                         <div className="flex flex-col sm:flex-row gap-2">
                            <Button variant="default" size="sm" className="w-full">
-                                <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                                <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
                            </Button>
                             <Button variant="default" size="sm" className="w-full">
                                 <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
