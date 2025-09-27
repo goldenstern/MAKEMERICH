@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt, useAccountEffect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt, useAccountEffect, useConfig } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { parseUnits, formatUnits } from 'viem';
+import { waitForTransactionReceipt } from 'wagmi/actions'
 import { gameABI } from '@/lib/abi';
 
 export interface GameData {
@@ -63,6 +64,7 @@ export function useWeb3Provider(): Web3ContextType {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContractAsync, data: hash } = useWriteContract();
+  const wagmiConfig = useConfig();
   
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
 
@@ -192,7 +194,7 @@ export function useWeb3Provider(): Web3ContextType {
     try {
         toast({ title: "Approving...", description: "Please confirm the transaction in your wallet." });
 
-        const approveTx = await writeContractAsync({
+        const approveTxHash = await writeContractAsync({
             abi: [ 
               { "constant": false, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
             ],
@@ -202,28 +204,10 @@ export function useWeb3Provider(): Web3ContextType {
         });
         
         toast({ title: "Approval Sent", description: "Waiting for confirmation..." });
-        
-        // We will not implement a wait here, because the `isConfirmed` useEffect will handle it.
-        // But for a better user experience, we can wait for the approval before sending the deposit transaction.
-        // However, the prompt is about keeping the button busy. So we proceed to the next step.
-        // A more robust solution involves `waitForTransactionReceipt`. Let's use it.
 
-        const approveReceipt = await new Promise<any>((resolve, reject) => {
-            const unwatch = useWaitForTransactionReceipt({ hash: approveTx });
-            const checkConfirmation = () => {
-              if (unwatch.isSuccess) {
-                resolve(unwatch.data);
-                if (typeof unwatch.unwatch === 'function') unwatch.unwatch();
-              } else if (unwatch.isError) {
-                reject(unwatch.error);
-                if (typeof unwatch.unwatch === 'function') unwatch.unwatch();
-              } else {
-                setTimeout(checkConfirmation, 1000);
-              }
-            };
-            checkConfirmation();
+        const approveReceipt = await waitForTransactionReceipt(wagmiConfig, {
+            hash: approveTxHash,
         });
-
 
         if (approveReceipt.status !== 'success') {
           throw new Error("Approval transaction failed.");
