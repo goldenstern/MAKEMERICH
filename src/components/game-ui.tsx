@@ -357,22 +357,35 @@ export default function GameUI() {
   }, []);
 
   const prevPlayerBalance = React.useRef<number | undefined>();
+  const isCheckingWin = React.useRef(false);
 
   React.useEffect(() => {
     if (transactionStatus.action === 'makeMeRich' && transactionStatus.status === 'confirmed') {
-        const currentBalance = gameData?.playerBalance ?? 0;
-        const previousBalance = prevPlayerBalance.current ?? 0;
-
-        if (currentBalance > previousBalance) {
-             setShowConfetti(true);
-        }
-        clearTransactionStatus();
+      isCheckingWin.current = true;
+      // We don't check for win here, we wait for the data to be fetched
     }
-    if (gameData) {
-       prevPlayerBalance.current = gameData.playerBalance;
-    }
+  }, [transactionStatus]);
 
-  }, [transactionStatus, clearTransactionStatus, gameData]);
+  React.useEffect(() => {
+    // This effect runs when gameData changes.
+    if (isCheckingWin.current && !isDataFetching && gameData) {
+      const currentBalance = gameData.playerBalance;
+      const previousBalance = prevPlayerBalance.current ?? 0;
+
+      if (currentBalance > previousBalance) {
+        setShowConfetti(true);
+      }
+      
+      // Reset flags and clear status
+      isCheckingWin.current = false;
+      clearTransactionStatus();
+    }
+    
+    // Always update the previous balance when gameData is available and not fetching
+    if (gameData && !isDataFetching) {
+      prevPlayerBalance.current = gameData.playerBalance;
+    }
+  }, [gameData, isDataFetching, clearTransactionStatus]);
 
 
   return (
@@ -392,3 +405,5 @@ export default function GameUI() {
     </div>
   );
 }
+
+    
