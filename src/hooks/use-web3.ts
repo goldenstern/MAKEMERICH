@@ -23,6 +23,7 @@ export interface Web3ContextType {
   tokenSymbol: string | undefined;
   gameData: GameData | null;
   isLoading: boolean;
+  isDataFetching: boolean;
   actionLoading: Record<string, boolean>;
   connectWallet: () => void;
   disconnectWallet: () => void;
@@ -74,7 +75,7 @@ export function useWeb3Provider(): Web3ContextType {
       disconnect();
   };
 
-  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
+  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading, isFetching: isTokenBalanceFetching } = useBalance({
     address,
     token: tokenAddress,
     query: {
@@ -86,7 +87,7 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = 8;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-    const { data: gameDataResult, isLoading: isGameDataLoading, refetch: refetchGameData, isError, error } = useReadContract({
+    const { data: gameDataResult, isLoading: isGameDataLoading, isFetching: isGameDataFetching, refetch: refetchGameData, isError, error } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
@@ -128,6 +129,8 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ title: "Успех", description: "Транзакция подтверждена." });
       refetchGameData();
       refetchTokenBalance();
+      // Сбрасываем все состояния загрузки действий
+      setActionLoading({});
     }
   }, [isConfirmed, refetchGameData, refetchTokenBalance, toast]);
 
@@ -149,8 +152,7 @@ export function useWeb3Provider(): Web3ContextType {
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
-    } finally {
-      setLoadingState(action, false);
+      setLoadingState(action, false); // Сбрасываем загрузку только при ошибке
     }
   };
 
@@ -160,7 +162,7 @@ export function useWeb3Provider(): Web3ContextType {
     
     setLoadingState('deposit', true);
     try {
-        const {data: approveHash} = await writeContractAsync({
+        const approveTx = await writeContractAsync({
             abi: [ 
               {
                 "constant": false,
@@ -178,10 +180,15 @@ export function useWeb3Provider(): Web3ContextType {
             args: [contractAddress, amountInUnits],
         });
 
-        toast({ title: "Запрос на подтверждение", description: "Ожидание подтверждения..." });
-        
-        await new Promise(resolve => setTimeout(resolve, 15000)); // Увеличено время ожидания
-        
+        toast({ title: "Подтверждение...", description: "Ожидание подтверждения права на списание." });
+
+        // Не используем isConfirmed напрямую, а ждем чек
+        // const receipt = await waitForTransactionReceipt({ hash: approveTx });
+
+        // Вместо этого просто ждем
+        await new Promise(resolve => setTimeout(resolve, 15000));
+
+
         toast({ title: "Подтверждено!", description: "Внесение токенов..." });
 
         await handleTransaction('deposit', 'deposit', [amountInUnits]);
@@ -189,7 +196,6 @@ export function useWeb3Provider(): Web3ContextType {
     } catch (e: any) {
         console.error(e);
         toast({ variant: "destructive", title: "Ошибка депозита", description: e.shortMessage || e.message });
-    } finally {
         setLoadingState('deposit', false);
     }
   };
@@ -209,7 +215,9 @@ export function useWeb3Provider(): Web3ContextType {
     await handleTransaction('makeMeRich', 'makeMeRich', []);
   };
 
-  const isLoading = isConnecting || isConfirming || (isConnected && (isGameDataLoading || isTokenBalanceLoading) && !gameDataResult);
+  const isLoading = isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading) && !gameDataResult);
+  const isDataFetching = (isConnected && (isGameDataFetching || isTokenBalanceFetching));
+
 
   return {
     isConnected,
@@ -219,6 +227,7 @@ export function useWeb3Provider(): Web3ContextType {
     tokenSymbol: tokenBalanceData?.symbol,
     gameData,
     isLoading,
+    isDataFetching,
     actionLoading,
     connectWallet,
     disconnectWallet,

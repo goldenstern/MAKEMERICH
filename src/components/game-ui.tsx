@@ -4,7 +4,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, Scaling, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet } from "lucide-react";
 
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
@@ -254,7 +254,7 @@ const Dashboard = () => {
 };
 
 export default function GameUI() {
-  const { isConnected } = useWeb3();
+  const { isConnected, isDataFetching, isLoading } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -268,6 +268,13 @@ export default function GameUI() {
         isConnected ? <Dashboard /> : <ConnectWalletView />
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
+      )}
+      {isClient && !isLoading && isDataFetching && (
+        <div className="fixed bottom-4 left-4 z-50">
+            <div className="bg-background border border-border rounded-full p-2 shadow-lg">
+                <RefreshCw className="h-5 w-5 animate-spin text-primary" />
+            </div>
+        </div>
       )}
     </div>
   );
