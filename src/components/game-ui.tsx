@@ -4,7 +4,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, Scaling, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet } from "lucide-react";
 
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,43 @@ const amountSchema = z.object({
 });
 
 type AmountFormValues = z.infer<typeof amountSchema>;
+
+const REFRESH_INTERVAL = 30; // in seconds
+
+const RefreshTimer = () => {
+    const { isDataFetching, refreshData } = useWeb3();
+    const [countdown, setCountdown] = React.useState(REFRESH_INTERVAL);
+
+    React.useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isDataFetching) {
+            setCountdown(REFRESH_INTERVAL);
+        } else {
+            setCountdown(REFRESH_INTERVAL);
+            timer = setInterval(() => {
+                setCountdown(prev => (prev > 0 ? prev - 1 : REFRESH_INTERVAL));
+            }, 1000);
+        }
+
+        return () => clearInterval(timer);
+    }, [isDataFetching]);
+
+    const handleRefresh = () => {
+      if (!isDataFetching) {
+        refreshData();
+      }
+    }
+    
+    return (
+        <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
+             <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
+             <span>
+                {isDataFetching ? 'Updating...' : `${countdown}s`}
+             </span>
+        </button>
+    );
+};
+
 
 const Header = () => {
   const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading } = useWeb3();
@@ -42,6 +79,7 @@ const Header = () => {
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
+          <RefreshTimer />
           <div className="text-sm text-muted-foreground hidden sm:block">
             {formattedAddress}
           </div>
@@ -148,7 +186,7 @@ const Dashboard = () => {
                         <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
                         <div className="flex flex-col sm:flex-row gap-2">
                            <Button variant="default" size="sm" className="w-full">
-                                <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                                <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
                            </Button>
                             <Button variant="default" size="sm" className="w-full">
                                 <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
@@ -200,7 +238,7 @@ const Dashboard = () => {
             <CardContent className="space-y-4">
                 <div className="flex items-baseline gap-2">
                     {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                      <><span className="text-4xl font-bold">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
+                      <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
                       <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
                     }
                 </div>
@@ -211,7 +249,7 @@ const Dashboard = () => {
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="sr-only">Amount</FormLabel>
+                                    <FormLabel className="sr-only">Withdraw</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
                                     </FormControl>
@@ -254,7 +292,7 @@ const Dashboard = () => {
 };
 
 export default function GameUI() {
-  const { isConnected } = useWeb3();
+  const { isConnected, isDataFetching } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -269,6 +307,11 @@ export default function GameUI() {
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
       )}
+       {isClient && isDataFetching && !isConnected && (
+            <div className="fixed bottom-4 left-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+        )}
     </div>
   );
 }
