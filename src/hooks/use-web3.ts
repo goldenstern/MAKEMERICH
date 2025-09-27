@@ -66,7 +66,7 @@ export function useWeb3Provider(): Web3ContextType {
   
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
 
-  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+  const { isSuccess: isConfirmed, data: receipt } = useWaitForTransactionReceipt({ hash });
 
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const setLoadingState = (action: string, state: boolean) => {
@@ -134,16 +134,17 @@ export function useWeb3Provider(): Web3ContextType {
 
   useEffect(() => {
     if (isConfirmed && transactionStatus.action && transactionStatus.status === 'pending') {
-      toast({ title: "Success", description: "Transaction confirmed." });
-      setTransactionStatus(prev => ({ ...prev, status: 'confirmed' }));
-      refetchGameData();
-      refetchTokenBalance();
-      // Reset only the specific action loading state after a delay to allow UI to update
-      setTimeout(() => {
-        setLoadingState(transactionStatus.action!, false);
-      }, 500);
+       if (transactionStatus.action !== 'approve') {
+          toast({ title: "Success", description: "Transaction confirmed." });
+          setTransactionStatus(prev => ({ ...prev, status: 'confirmed' }));
+          refetchGameData();
+          refetchTokenBalance();
+          setTimeout(() => {
+            setLoadingState(transactionStatus.action!, false);
+          }, 500);
+      }
     }
-  }, [isConfirmed, transactionStatus.action, transactionStatus.status, refetchGameData, refetchTokenBalance, toast]);
+  }, [isConfirmed, receipt, transactionStatus.action, transactionStatus.status, refetchGameData, refetchTokenBalance, toast]);
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
@@ -156,7 +157,7 @@ export function useWeb3Provider(): Web3ContextType {
   }, [refetchGameData, refetchTokenBalance, isGameDataFetching, isTokenBalanceFetching]);
 
 
-  const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
+  const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
     if (!isConnected) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
@@ -164,18 +165,20 @@ export function useWeb3Provider(): Web3ContextType {
     setLoadingState(action, true);
     setTransactionStatus({ action, status: 'pending' });
     try {
-        await writeContractAsync({
+        const tx = await writeContractAsync({
             abi: gameABI,
             address: contractAddress,
             functionName,
             args,
         });
-      toast({ title: "Transaction Sent", description: "Waiting for confirmation..." });
+      toast({ title: customToastTitle || "Transaction Sent", description: "Waiting for confirmation..." });
+      return tx;
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Transaction Error", description: e.shortMessage || e.message });
       setLoadingState(action, false); 
       setTransactionStatus({ action, status: 'error' });
+      throw e;
     }
   };
 
@@ -185,33 +188,51 @@ export function useWeb3Provider(): Web3ContextType {
     
     setLoadingState('deposit', true);
     setTransactionStatus({ action: 'deposit', status: 'pending' });
+
     try {
-        await writeContractAsync({
+        toast({ title: "Approving...", description: "Please confirm the transaction in your wallet." });
+
+        const approveTx = await writeContractAsync({
             abi: [ 
-              {
-                "constant": false,
-                "inputs": [
-                  { "name": "_spender", "type": "address" },
-                  { "name": "_value", "type": "uint256" }
-                ],
-                "name": "approve",
-                "outputs": [{ "name": "", "type": "bool" }],
-                "type": "function"
-              }
+              { "constant": false, "inputs": [ { "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
             ],
             address: tokenAddress,
             functionName: 'approve',
             args: [contractAddress, amountInUnits],
         });
+        
+        toast({ title: "Approval Sent", description: "Waiting for confirmation..." });
+        
+        // We will not implement a wait here, because the `isConfirmed` useEffect will handle it.
+        // But for a better user experience, we can wait for the approval before sending the deposit transaction.
+        // However, the prompt is about keeping the button busy. So we proceed to the next step.
+        // A more robust solution involves `waitForTransactionReceipt`. Let's use it.
 
-        toast({ title: "Approving...", description: "Waiting for approval confirmation." });
+        const approveReceipt = await new Promise<any>((resolve, reject) => {
+            const unwatch = useWaitForTransactionReceipt({ hash: approveTx });
+            const checkConfirmation = () => {
+              if (unwatch.isSuccess) {
+                resolve(unwatch.data);
+                if (typeof unwatch.unwatch === 'function') unwatch.unwatch();
+              } else if (unwatch.isError) {
+                reject(unwatch.error);
+                if (typeof unwatch.unwatch === 'function') unwatch.unwatch();
+              } else {
+                setTimeout(checkConfirmation, 1000);
+              }
+            };
+            checkConfirmation();
+        });
 
-        await new Promise(resolve => setTimeout(resolve, 15000));
+
+        if (approveReceipt.status !== 'success') {
+          throw new Error("Approval transaction failed.");
+        }
 
 
         toast({ title: "Approved!", description: "Depositing tokens..." });
 
-        await handleTransaction('deposit', 'deposit', [amountInUnits]);
+        await handleTransaction('deposit', 'deposit', [amountInUnits], "Depositing...");
 
     } catch (e: any) {
         console.error(e);
