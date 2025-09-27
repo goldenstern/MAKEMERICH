@@ -15,6 +15,11 @@ export interface GameData {
   riskCoefficient: number;
 }
 
+interface TransactionStatus {
+  action: string | null;
+  status: 'pending' | 'confirmed' | 'error' | null;
+}
+
 export interface Web3ContextType {
   isConnected: boolean;
   address: `0x${string}` | undefined;
@@ -25,6 +30,7 @@ export interface Web3ContextType {
   isLoading: boolean;
   isDataFetching: boolean;
   actionLoading: Record<string, boolean>;
+  transactionStatus: TransactionStatus;
   connectWallet: () => void;
   disconnectWallet: () => void;
   deposit: (amount: number) => Promise<void>;
@@ -32,6 +38,7 @@ export interface Web3ContextType {
   withdrawAll: () => Promise<void>;
   makeMeRich: () => Promise<void>;
   refreshData: () => void;
+  clearTransactionStatus: () => void;
   contractAddress?: string;
   tokenAddress?: string;
 }
@@ -56,10 +63,10 @@ export function useWeb3Provider(): Web3ContextType {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContractAsync, data: hash } = useWriteContract();
-    const { isLoading: isConfirming, isSuccess: isConfirmed } = 
-    useWaitForTransactionReceipt({ 
-      hash, 
-    })
+  
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
+
+  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const setLoadingState = (action: string, state: boolean) => {
@@ -112,41 +119,50 @@ export function useWeb3Provider(): Web3ContextType {
     useAccountEffect({
         onConnect: (data) => {
             toast({
-                title: "Кошелек подключен",
-                description: `Добро пожаловать, ${data.address}`,
+                title: "Wallet Connected",
+                description: `Welcome, ${data.address}`,
             });
             refetchGameData();
             refetchTokenBalance();
         },
         onDisconnect: () => {
             toast({
-                title: "Кошелек отключен",
+                title: "Wallet Disconnected",
             });
         },
     });
 
   useEffect(() => {
-    if (isConfirmed) {
-      toast({ title: "Успех", description: "Транзакция подтверждена." });
+    if (isConfirmed && transactionStatus.action && transactionStatus.status === 'pending') {
+      toast({ title: "Success", description: "Transaction confirmed." });
+      setTransactionStatus(prev => ({ ...prev, status: 'confirmed' }));
       refetchGameData();
       refetchTokenBalance();
-      // Сбрасываем все состояния загрузки действий
-      setActionLoading({});
+      // Reset only the specific action loading state after a delay to allow UI to update
+      setTimeout(() => {
+        setLoadingState(transactionStatus.action!, false);
+      }, 500);
     }
-  }, [isConfirmed, refetchGameData, refetchTokenBalance, toast]);
+  }, [isConfirmed, transactionStatus.action, transactionStatus.status, refetchGameData, refetchTokenBalance, toast]);
+
+  const clearTransactionStatus = () => {
+      setTransactionStatus({ action: null, status: null });
+  };
 
   const refreshData = useCallback(() => {
+    if(isGameDataFetching || isTokenBalanceFetching) return;
     refetchGameData();
     refetchTokenBalance();
-  }, [refetchGameData, refetchTokenBalance]);
+  }, [refetchGameData, refetchTokenBalance, isGameDataFetching, isTokenBalanceFetching]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = []) => {
     if (!isConnected) {
-        toast({ variant: "destructive", title: "Ошибка", description: "Кошелек не подключен." });
+        toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
     }
     setLoadingState(action, true);
+    setTransactionStatus({ action, status: 'pending' });
     try {
         await writeContractAsync({
             abi: gameABI,
@@ -154,21 +170,23 @@ export function useWeb3Provider(): Web3ContextType {
             functionName,
             args,
         });
-      toast({ title: "Транзакция отправлена", description: "Ожидание подтверждения..." });
+      toast({ title: "Transaction Sent", description: "Waiting for confirmation..." });
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Ошибка транзакции", description: e.shortMessage || e.message });
-      setLoadingState(action, false); // Сбрасываем загрузку только при ошибке
+      toast({ variant: "destructive", title: "Transaction Error", description: e.shortMessage || e.message });
+      setLoadingState(action, false); 
+      setTransactionStatus({ action, status: 'error' });
     }
   };
 
   const deposit = async (amount: number) => {
-    if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
     setLoadingState('deposit', true);
+    setTransactionStatus({ action: 'deposit', status: 'pending' });
     try {
-        const approveTx = await writeContractAsync({
+        await writeContractAsync({
             abi: [ 
               {
                 "constant": false,
@@ -186,43 +204,44 @@ export function useWeb3Provider(): Web3ContextType {
             args: [contractAddress, amountInUnits],
         });
 
-        toast({ title: "Подтверждение...", description: "Ожидание подтверждения права на списание." });
+        toast({ title: "Approving...", description: "Waiting for approval confirmation." });
 
-        // Не используем isConfirmed напрямую, а ждем чек
-        // const receipt = await waitForTransactionReceipt({ hash: approveTx });
-
-        // Вместо этого просто ждем
         await new Promise(resolve => setTimeout(resolve, 15000));
 
 
-        toast({ title: "Подтверждено!", description: "Внесение токенов..." });
+        toast({ title: "Approved!", description: "Depositing tokens..." });
 
         await handleTransaction('deposit', 'deposit', [amountInUnits]);
 
     } catch (e: any) {
         console.error(e);
-        toast({ variant: "destructive", title: "Ошибка депозита", description: e.shortMessage || e.message });
+        toast({ variant: "destructive", title: "Deposit Error", description: e.shortMessage || e.message });
         setLoadingState('deposit', false);
+        setTransactionStatus({ action: 'deposit', status: 'error' });
     }
   };
 
   const withdraw = async (amount: number) => {
-    if (amount <= 0) return toast({ variant: "destructive", title: "Неверная сумма" });
+    if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
   };
 
   const withdrawAll = async () => {
-    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "Нет баланса для вывода" });
+    if (!gameData || gameData.playerBalance <= 0) return toast({ variant: "destructive", title: "No balance to withdraw" });
     await handleTransaction('withdrawAll', 'withdrawAll', []);
   };
 
   const makeMeRich = async () => {
+    if (!gameData || gameData.playerBalance < gameData.minBet) {
+        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData?.minBet} to play.`});
+        return;
+    }
     await handleTransaction('makeMeRich', 'makeMeRich', []);
   };
 
-  const isLoading = isConnecting || (isConnected && (isGameDataLoading || isTokenBalanceLoading) && !gameDataResult);
-  const isDataFetching = (isConnected && (isGameDataFetching || isTokenBalanceFetching));
+  const isLoading = isConnecting || (isConnected && isGameDataLoading && !gameDataResult);
+  const isDataFetching = (isGameDataFetching || isTokenBalanceFetching);
 
 
   return {
@@ -235,6 +254,7 @@ export function useWeb3Provider(): Web3ContextType {
     isLoading,
     isDataFetching,
     actionLoading,
+    transactionStatus,
     connectWallet,
     disconnectWallet,
     deposit,
@@ -242,6 +262,7 @@ export function useWeb3Provider(): Web3ContextType {
     withdrawAll,
     makeMeRich,
     refreshData,
+    clearTransactionStatus,
     contractAddress,
     tokenAddress
   };
