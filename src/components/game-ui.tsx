@@ -414,6 +414,27 @@ const Dashboard = () => {
             <StatCard icon={ArrowDownRight} title="Minimum Stake (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
             <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
           </div>
+           <Card>
+                <CardHeader>
+                     <CardTitle className="text-sm font-medium">Buy/Sell Angl Shards (ANGLS) Now</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                       <Button variant="default" size="sm" className="w-full">
+                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                       </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
+                        </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
+                        </Button>
+                    </div>
+                     <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+                     </Button>
+                </CardContent>
+            </Card>
         </div>
         <Card className="md:col-span-2 lg:col-span-1">
             <CardHeader>
@@ -465,23 +486,7 @@ const Dashboard = () => {
                     </form>
                 </Form>
                  <Separator />
-                <div className="space-y-2 pt-4">
-                    <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                       <Button variant="default" size="sm" className="w-full">
-                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
-                       </Button>
-                        <Button variant="default" size="sm" className="w-full">
-                            <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
-                        </Button>
-                        <Button variant="default" size="sm" className="w-full">
-                            <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
-                        </Button>
-                    </div>
-                     <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
-                     </Button>
-                </div>
+               
             </CardContent>
         </Card>
       </div>
