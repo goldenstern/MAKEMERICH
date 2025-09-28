@@ -377,90 +377,85 @@ const Dashboard = () => {
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-8">
-            <div className="grid gap-8 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Your Wallet</CardTitle>
-                        <CardDescription>Your available token balance.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                         {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-bold">{formattedTokenBalance}</span>
-                                <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
-                            </div>
-                         }
-                        <Separator />
-                        <div className="space-y-2">
-                            <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
-                            <div className="flex flex-col sm:flex-row gap-2">
-                               <Button variant="default" size="sm" className="w-full">
-                                    <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
-                               </Button>
-                                <Button variant="default" size="sm" className="w-full">
-                                    <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
-                                </Button>
-                                <Button variant="default" size="sm" className="w-full">
-                                    <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
-                                </Button>
-                            </div>
-                             <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                                <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
-                             </Button>
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card>
+            <CardHeader>
+                <CardTitle>Your Wallet</CardTitle>
+                <CardDescription>Your available token balance.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold">{formattedTokenBalance}</span>
+                        <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
+                    </div>
+                 }
+                <Separator />
+                <div className="space-y-2">
+                    <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                       <Button variant="default" size="sm" className="w-full">
+                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                       </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
+                        </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
+                        </Button>
+                    </div>
+                     <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+                     </Button>
+                </div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Your Stake</CardTitle>
+                <CardDescription>Tokens you can use or withdraw.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-baseline gap-2">
+                    {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                      <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
+                      <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
+                    }
+                </div>
+                 <Form {...form}>
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="sr-only">Amount</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Amount" {...field} step="any"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <div className="flex flex-col sm:flex-row gap-2">
+                           <Button type="button" onClick={form.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
+                               {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                               Stake
+                           </Button>
+                           <Button type="button" onClick={form.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
+                               {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                               Withdraw
+                           </Button>
                         </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Your Stake</CardTitle>
-                        <CardDescription>Tokens you can use or withdraw.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-baseline gap-2">
-                            {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                              <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
-                              <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
-                            }
-                        </div>
-                         <Form {...form}>
-                            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="sr-only">Amount</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="Amount" {...field} step="any"/>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                   <Button type="button" onClick={form.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
-                                       {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                       Stake
-                                   </Button>
-                                   <Button type="button" onClick={form.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
-                                       {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                       Withdraw
-                                   </Button>
-                                </div>
-                                <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
-                                   {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                   Withdraw All
-                                </Button>
-                                <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-        <div className="lg:col-span-1 hidden lg:block"> {/* This div is a placeholder to keep the 3-column layout on large screens */}</div>
+                        <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
+                           {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           Withdraw All
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
+                    </form>
+                </Form>
+            </CardContent>
+        </Card>
       </div>
 
        <div className="text-center pt-8">
