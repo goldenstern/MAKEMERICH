@@ -242,19 +242,20 @@ const Header = () => {
 };
 
 const StatCard = ({ icon: Icon, title, value, isLoading, unit }: { icon: React.ElementType, title: string, value: string | number, isLoading: boolean, unit?: string }) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+  <div className="p-4 border rounded-lg">
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
       <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
+    </div>
+    <Separator />
+    <div className="mt-2">
       {isLoading ? <Skeleton className="h-8 w-3/4" /> : (
         <div className="text-2xl font-bold">
-          {value} <span className="text-sm text-muted-foreground">{unit}</span>
+          {value} <span className="text-sm font-normal text-muted-foreground">{unit}</span>
         </div>
       )}
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 );
 
 const ConnectWalletView = () => {
