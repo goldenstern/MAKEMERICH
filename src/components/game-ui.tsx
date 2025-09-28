@@ -182,11 +182,6 @@ const Header = () => {
             <Link className="h-4 w-4" />
             Visit AnglVerse Website
         </a>
-        <Button variant="outline" size="sm" asChild className="hidden md:flex">
-             <a href="https://mmr.angl.money/" target="_blank" rel="noopener noreferrer">
-                <Share2 className="mr-2 h-4 w-4" /> Share/Grow
-             </a>
-        </Button>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
@@ -454,14 +449,21 @@ const Dashboard = () => {
 
        <div className="text-center pt-8">
             <h3 className="text-2xl font-bold font-headline mb-4">Ready?</h3>
-            <Button 
-                size="lg" 
-                className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
-                onClick={makeMeRich} 
-                disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
-            >
-                {getMakeMeRichButtonContent()}
-            </Button>
+            <div className="flex justify-center items-stretch gap-2 max-w-lg mx-auto">
+              <Button 
+                  size="lg" 
+                  className="flex-1 h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
+                  onClick={makeMeRich} 
+                  disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
+              >
+                  {getMakeMeRichButtonContent()}
+              </Button>
+              <Button variant="outline" size="lg" className="h-16" asChild>
+                   <a href="https://mmr.angl.money/" target="_blank" rel="noopener noreferrer">
+                      <Share2 className="mr-2 h-4 w-4" /> Grow
+                   </a>
+              </Button>
+            </div>
              {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
                 <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
              }
