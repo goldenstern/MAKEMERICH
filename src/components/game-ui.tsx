@@ -242,7 +242,7 @@ const ConnectWalletView = () => {
 };
 
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading } = useWeb3();
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, transactionStatus, getTransactionState } = useWeb3();
 
   const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
@@ -261,6 +261,23 @@ const Dashboard = () => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   });
+
+  const getMakeMeRichButtonContent = () => {
+    const state = getTransactionState('makeMeRich');
+    if (!state.isActive) {
+      return "MakeMeRich, GoldenStern!";
+    }
+    switch (state.stage) {
+      case 'awaiting_confirmation':
+        return "Awaiting confirmation...";
+      case 'processing':
+        return "Processing...";
+      case 'done':
+        return "Done!";
+      default:
+        return <Loader2 className="h-8 w-8 animate-spin" />;
+    }
+  };
 
 
   return (
@@ -381,12 +398,13 @@ const Dashboard = () => {
 
        <div className="text-center pt-8">
             <h3 className="text-2xl font-bold font-headline mb-4">Ready to Play?</h3>
-            <Button size="lg" className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['deposit'] || actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
-                {actionLoading['makeMeRich'] ? (
-                  <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-                ) : (
-                  "MakeMeRich, GoldenStern!"
-                )}
+            <Button 
+                size="lg" 
+                className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
+                onClick={makeMeRich} 
+                disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}
+            >
+                {getMakeMeRichButtonContent()}
             </Button>
              {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading &&
                 <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
@@ -460,5 +478,3 @@ export default function GameUI() {
     </div>
   );
 }
-
-    
