@@ -282,7 +282,8 @@ const Dashboard = () => {
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
 
-  const form = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+  const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+  const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   
   const explorerUrl = React.useMemo(() => {
     const chain = config.chains.find(c => c.id === config.state.chainId);
@@ -316,12 +317,12 @@ const Dashboard = () => {
 
   const onDeposit = (data: AmountFormValues) => {
     deposit(data.amount);
-    form.reset();
+    depositForm.reset();
   };
 
   const onWithdraw = (data: AmountFormValues) => {
     withdraw(data.amount);
-    form.reset();
+    withdrawForm.reset();
   };
   
   const formattedTokenBalance = parseFloat(tokenBalance).toLocaleString(undefined, {
@@ -390,8 +391,29 @@ const Dashboard = () => {
                         <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
                     </div>
                  }
+                <Form {...depositForm}>
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                        <FormField
+                            control={depositForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="sr-only">Amount</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Amount to stake" {...field} step="any"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                       <Button type="button" onClick={depositForm.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
+                           {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           Stake
+                       </Button>
+                    </form>
+                </Form>
                 <Separator />
-                <div className="space-y-2">
+                <div className="space-y-2 pt-4">
                     <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
                     <div className="flex flex-col sm:flex-row gap-2">
                        <Button variant="default" size="sm" className="w-full">
@@ -422,27 +444,23 @@ const Dashboard = () => {
                       <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
                     }
                 </div>
-                 <Form {...form}>
+                 <Form {...withdrawForm}>
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                         <FormField
-                            control={form.control}
+                            control={withdrawForm.control}
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="sr-only">Amount</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="Amount" {...field} step="any"/>
+                                        <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button type="button" onClick={form.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
-                               {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                               Stake
-                           </Button>
-                           <Button type="button" onClick={form.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
+                           <Button type="button" onClick={withdrawForm.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Withdraw
                            </Button>
