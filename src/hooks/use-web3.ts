@@ -228,6 +228,7 @@ export function useWeb3Provider(): Web3ContextType {
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
     setLoadingState('deposit', true);
+    setTransactionState('deposit', 'awaiting_confirmation');
 
     try {
         toast({ title: "Approving...", description: "Please confirm the transaction in your wallet." });
@@ -241,6 +242,7 @@ export function useWeb3Provider(): Web3ContextType {
             args: [contractAddress, amountInUnits],
         });
         
+        setTransactionState('deposit', 'processing');
         toast({ title: "Approval Sent", description: "Waiting for confirmation..." });
 
         const approveReceipt = await waitForTransactionReceipt(wagmiConfig, {
@@ -251,15 +253,19 @@ export function useWeb3Provider(): Web3ContextType {
           throw new Error("Approval transaction failed.");
         }
 
-        toast({ title: "Approved!", description: "Depositing tokens..." });
+        toast({ title: "Approved!", description: "Staking tokens..." });
 
-        await handleTransaction('deposit', 'deposit', [amountInUnits], "Depositing...");
+        await handleTransaction('deposit', 'deposit', [amountInUnits], "Staking...");
+        setTransactionState('deposit', 'done');
 
     } catch (e: any) {
         console.error(e);
-        toast({ variant: "destructive", title: "Deposit Error", description: e.shortMessage || e.message });
+        toast({ variant: "destructive", title: "Stake Error", description: e.shortMessage || e.message });
+        setTransactionState('deposit', 'error');
     } finally {
         setLoadingState('deposit', false);
+        // Reset state after a short delay to allow user to see the error state
+        setTimeout(() => setTransactionState('deposit', 'idle'), 2000);
     }
   };
 

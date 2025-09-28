@@ -331,7 +331,7 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Bet (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+        <StatCard icon={ArrowDownRight} title="Minimum Stake (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
@@ -372,8 +372,8 @@ const Dashboard = () => {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Deposit Tokens</CardTitle>
-                        <CardDescription>Move tokens from your wallet to the game.</CardDescription>
+                        <CardTitle>Stake Tokens</CardTitle>
+                        <CardDescription>Stake tokens from your wallet to the MMR AI.</CardDescription>
                     </CardHeader>
                      <Form {...depositForm}>
                         <form onSubmit={depositForm.handleSubmit(onDeposit)}>
@@ -385,7 +385,7 @@ const Dashboard = () => {
                                         <FormItem>
                                             <FormLabel className="sr-only">Amount</FormLabel>
                                             <FormControl>
-                                                <Input type="number" placeholder="Amount to deposit" {...field} step="any" />
+                                                <Input type="number" placeholder="Amount to stake" {...field} step="any" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -395,7 +395,7 @@ const Dashboard = () => {
                             <CardFooter>
                                  <Button type="submit" className="w-full" disabled={actionLoading['deposit']}>
                                     {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Deposit
+                                    Stake
                                 </Button>
                             </CardFooter>
                         </form>
@@ -405,8 +405,8 @@ const Dashboard = () => {
         </div>
         <Card className="lg:col-span-1">
             <CardHeader>
-                <CardTitle>Your Game Balance</CardTitle>
-                <CardDescription>Tokens you can play with or withdraw.</CardDescription>
+                <CardTitle>Your Stake</CardTitle>
+                <CardDescription>Tokens you can use or withdraw.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex items-baseline gap-2">
@@ -529,5 +529,3 @@ export default function GameUI() {
     </div>
   );
 }
-
-    
