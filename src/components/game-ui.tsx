@@ -290,69 +290,71 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 grid gap-8 md:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Your Wallet</CardTitle>
-                    <CardDescription>Your available token balance.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold">{formattedTokenBalance}</span>
-                            <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
+        <div className="lg:col-span-2 space-y-8">
+            <div className="grid gap-8 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Your Wallet</CardTitle>
+                        <CardDescription>Your available token balance.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-bold">{formattedTokenBalance}</span>
+                                <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
+                            </div>
+                         }
+                        <Separator />
+                        <div className="space-y-2">
+                            <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                               <Button variant="default" size="sm" className="w-full">
+                                    <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
+                               </Button>
+                                <Button variant="default" size="sm" className="w-full">
+                                    <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
+                                </Button>
+                                <Button variant="default" size="sm" className="w-full">
+                                    <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
+                                </Button>
+                            </div>
                         </div>
-                     }
-                    <Separator />
-                    <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                           <Button variant="default" size="sm" className="w-full">
-                                <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
-                           </Button>
-                            <Button variant="default" size="sm" className="w-full">
-                                <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
-                            </Button>
-                            <Button variant="default" size="sm" className="w-full">
-                                <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Deposit Tokens</CardTitle>
-                    <CardDescription>Move tokens from your wallet to the game.</CardDescription>
-                </CardHeader>
-                 <Form {...depositForm}>
-                    <form onSubmit={depositForm.handleSubmit(onDeposit)}>
-                        <CardContent className="space-y-2">
-                            <FormField
-                                control={depositForm.control}
-                                name="amount"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="sr-only">Amount</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="Amount to deposit" {...field} step="any" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                        <CardFooter>
-                             <Button type="submit" className="w-full" disabled={actionLoading['deposit']}>
-                                {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Deposit
-                            </Button>
-                        </CardFooter>
-                    </form>
-                </Form>
-            </Card>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Deposit Tokens</CardTitle>
+                        <CardDescription>Move tokens from your wallet to the game.</CardDescription>
+                    </CardHeader>
+                     <Form {...depositForm}>
+                        <form onSubmit={depositForm.handleSubmit(onDeposit)}>
+                            <CardContent className="space-y-2">
+                                <FormField
+                                    control={depositForm.control}
+                                    name="amount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="sr-only">Amount</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="Amount to deposit" {...field} step="any" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                            <CardFooter>
+                                 <Button type="submit" className="w-full" disabled={actionLoading['deposit']}>
+                                    {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Deposit
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Form>
+                </Card>
+            </div>
         </div>
-        <Card className="lg:col-span-1 row-start-1 lg:row-start-auto">
+        <Card className="lg:col-span-1">
             <CardHeader>
                 <CardTitle>Your Game Balance</CardTitle>
                 <CardDescription>Tokens you can play with or withdraw.</CardDescription>
