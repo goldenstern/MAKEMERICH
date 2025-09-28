@@ -171,6 +171,25 @@ const Header = () => {
     setIsClient(true);
   }, []);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: document.title,
+      text: "The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.",
+      url: "https://mmr.angl.money/",
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error("Share failed:", err);
+        window.open(shareData.url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      window.open(shareData.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+
   return (
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-4">
@@ -182,6 +201,10 @@ const Header = () => {
             <Link className="h-4 w-4" />
             Visit AnglVerse Website
         </a>
+        <Button variant="link" size="sm" onClick={handleShare} className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Share2 className="h-4 w-4" />
+            Share/Grow
+        </Button>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
@@ -259,9 +282,8 @@ const Dashboard = () => {
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
 
-  const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
-  const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
-
+  const form = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+  
   const explorerUrl = React.useMemo(() => {
     const chain = config.chains.find(c => c.id === config.state.chainId);
     if (!chain || !tokenAddress) return '#';
@@ -294,12 +316,12 @@ const Dashboard = () => {
 
   const onDeposit = (data: AmountFormValues) => {
     deposit(data.amount);
-    depositForm.reset();
+    form.reset();
   };
 
   const onWithdraw = (data: AmountFormValues) => {
     withdraw(data.amount);
-    withdrawForm.reset();
+    form.reset();
   };
   
   const formattedTokenBalance = parseFloat(tokenBalance).toLocaleString(undefined, {
@@ -350,7 +372,7 @@ const Dashboard = () => {
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-        <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+        <StatCard icon={Users} title="Mined Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
         <StatCard icon={ArrowDownRight} title="Minimum Stake (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
@@ -392,79 +414,53 @@ const Dashboard = () => {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Stake Tokens</CardTitle>
-                        <CardDescription>Stake tokens from your wallet to the MMR.</CardDescription>
+                        <CardTitle>Your Stake</CardTitle>
+                        <CardDescription>Tokens you can use or withdraw.</CardDescription>
                     </CardHeader>
-                     <Form {...depositForm}>
-                        <form onSubmit={depositForm.handleSubmit(onDeposit)}>
-                            <CardContent className="space-y-2">
+                    <CardContent className="space-y-4">
+                        <div className="flex items-baseline gap-2">
+                            {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                              <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
+                              <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
+                            }
+                        </div>
+                         <Form {...form}>
+                            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                                 <FormField
-                                    control={depositForm.control}
+                                    control={form.control}
                                     name="amount"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="sr-only">Amount</FormLabel>
                                             <FormControl>
-                                                <Input type="number" placeholder="Amount to stake" {...field} step="any" />
+                                                <Input type="number" placeholder="Amount" {...field} step="any"/>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                            </CardContent>
-                            <CardFooter>
-                                 <Button type="submit" className="w-full" disabled={actionLoading['deposit']}>
-                                    {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Stake
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                   <Button type="button" onClick={form.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
+                                       {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                       Stake
+                                   </Button>
+                                   <Button type="button" onClick={form.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
+                                       {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                       Withdraw
+                                   </Button>
+                                </div>
+                                <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
+                                   {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                   Withdraw All
                                 </Button>
-                            </CardFooter>
-                        </form>
-                    </Form>
+                                <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
+                            </form>
+                        </Form>
+                    </CardContent>
                 </Card>
             </div>
         </div>
-        <Card className="lg:col-span-1">
-            <CardHeader>
-                <CardTitle>Your Stake</CardTitle>
-                <CardDescription>Tokens you can use or withdraw.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-baseline gap-2">
-                    {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                      <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
-                      <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
-                    }
-                </div>
-                 <Form {...withdrawForm}>
-                    <form onSubmit={withdrawForm.handleSubmit(onWithdraw)} className="space-y-4">
-                        <FormField
-                            control={withdrawForm.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="sr-only">Withdraw</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                           <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
-                               {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                               Withdraw
-                           </Button>
-                           <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
-                               {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                               Withdraw All
-                           </Button>
-                        </div>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
+        <div className="lg:col-span-1 hidden lg:block"> {/* This div is a placeholder to keep the 3-column layout on large screens */}</div>
       </div>
 
        <div className="text-center pt-8">
