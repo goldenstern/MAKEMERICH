@@ -306,7 +306,7 @@ const Dashboard = () => {
       }
     }
     if (cooldown > 0) {
-      return `Next game in ${formatCountdown(cooldown)}`;
+      return `Next block in ${formatCountdown(cooldown)}`;
     }
     return "MakeMeRich, GoldenStern!";
   };
@@ -512,3 +512,5 @@ export default function GameUI() {
     </div>
   );
 }
+
+    
