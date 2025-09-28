@@ -4,8 +4,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet } from "lucide-react";
-
+import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2 } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,20 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "./ui/separator";
+import { useConfig } from "wagmi";
+import { mainnet } from "wagmi/chains";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -21,6 +34,7 @@ const amountSchema = z.object({
 type AmountFormValues = z.infer<typeof amountSchema>;
 
 const REFRESH_INTERVAL = 30; // in seconds
+const DONT_REMIND_STORAGE_KEY = "mmr-dont-remind-again";
 
 // A component for the confetti effect
 const Confetti = ({ onComplete }: { onComplete: () => void }) => {
@@ -170,6 +184,25 @@ const Header = () => {
     setIsClient(true);
   }, []);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: document.title,
+      text: "The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.",
+      url: "https://mmr.angl.money/",
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error("Share failed:", err);
+        window.open(shareData.url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      window.open(shareData.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+
   return (
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-4">
@@ -181,6 +214,10 @@ const Header = () => {
             <Link className="h-4 w-4" />
             Visit AnglVerse Website
         </a>
+        <Button variant="link" size="sm" onClick={handleShare} className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Share2 className="h-4 w-4" />
+            Share/Grow
+        </Button>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
@@ -241,11 +278,81 @@ const ConnectWalletView = () => {
   );
 };
 
+const formatCountdown = (seconds: number) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [
+    h > 0 ? h.toString().padStart(2, '0') : null,
+    m.toString().padStart(2, '0'),
+    s.toString().padStart(2, '0'),
+  ].filter(Boolean).join(':');
+};
+
+
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading } = useWeb3();
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress } = useWeb3();
+  const config = useConfig();
+  const [cooldown, setCooldown] = React.useState(0);
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
+  const [dontRemindAgain, setDontRemindAgain] = React.useState(false);
 
   const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+  
+  const explorerUrl = React.useMemo(() => {
+    const chain = config.chains.find(c => c.id === config.state.chainId);
+    if (!chain || !tokenAddress) return '#';
+    const baseUrl = chain.blockExplorers?.default.url;
+    if (!baseUrl) {
+      // Fallback for custom chains without explorer defined
+      return `https://bscscan.com/token/${tokenAddress}`;
+    }
+    return `${baseUrl}/token/${tokenAddress}`;
+  }, [config.state.chainId, config.chains, tokenAddress]);
+
+
+  React.useEffect(() => {
+    if (gameData?.nextAvailableTime) {
+      const now = Math.floor(Date.now() / 1000);
+      const remaining = gameData.nextAvailableTime - now;
+      setCooldown(remaining > 0 ? remaining : 0);
+    }
+  }, [gameData?.nextAvailableTime]);
+
+  React.useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setInterval(() => {
+        setCooldown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [cooldown]);
+
+  React.useEffect(() => {
+    const savedPreference = localStorage.getItem(DONT_REMIND_STORAGE_KEY);
+    if (savedPreference === 'true') {
+      setDontRemindAgain(true);
+    }
+  }, []);
+
+  const handleMakeMeRichClick = () => {
+    const shouldRemind = !dontRemindAgain && localStorage.getItem(DONT_REMIND_STORAGE_KEY) !== 'true';
+    if (shouldRemind) {
+      setIsRiskDialogOpen(true);
+    } else {
+      makeMeRich();
+    }
+  };
+
+  const handleConfirmRisk = () => {
+    if (dontRemindAgain) {
+      localStorage.setItem(DONT_REMIND_STORAGE_KEY, 'true');
+    }
+    setIsRiskDialogOpen(false);
+    makeMeRich();
+  };
+
 
   const onDeposit = (data: AmountFormValues) => {
     deposit(data.amount);
@@ -262,83 +369,112 @@ const Dashboard = () => {
     maximumFractionDigits: 4,
   });
 
+  const getMakeMeRichButtonContent = () => {
+    const state = getTransactionState('makeMeRich');
+    if (state.isActive) {
+      switch (state.stage) {
+        case 'awaiting_confirmation':
+          return "Awaiting confirmation...";
+        case 'processing':
+          return "Processing...";
+        default:
+          return <Loader2 className="h-8 w-8 animate-spin" />;
+      }
+    }
+    if (cooldown > 0) {
+      return `Next block in ${formatCountdown(cooldown)}`;
+    }
+    return "MakeMeRich, GoldenStern!";
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: document.title,
+      text: "The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.",
+      url: "https://mmr.angl.money/",
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error("Share failed:", err);
+        // Fallback for browsers that fail to share
+        window.open(shareData.url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      // Fallback for browsers that don't support navigator.share
+      window.open(shareData.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-        <StatCard icon={Users} title="Number of Players" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Bet (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+        <StatCard icon={Users} title="Mined Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+        <StatCard icon={ArrowDownRight} title="Minimum Stake (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
         <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 grid gap-8 md:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Your Wallet</CardTitle>
-                    <CardDescription>Your available token balance.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold">{formattedTokenBalance}</span>
-                            <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
-                        </div>
-                     }
-                    <Separator />
-                    <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                           <Button variant="default" size="sm" className="w-full">
-                                <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
-                           </Button>
-                            <Button variant="default" size="sm" className="w-full">
-                                <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
-                            </Button>
-                            <Button variant="default" size="sm" className="w-full">
-                                <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
-                            </Button>
-                        </div>
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card>
+            <CardHeader>
+                <CardTitle>Your Wallet</CardTitle>
+                <CardDescription>Your available token balance.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold">{formattedTokenBalance}</span>
+                        <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
                     </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Deposit Tokens</CardTitle>
-                    <CardDescription>Move tokens from your wallet to the game.</CardDescription>
-                </CardHeader>
-                 <Form {...depositForm}>
-                    <form onSubmit={depositForm.handleSubmit(onDeposit)}>
-                        <CardContent className="space-y-2">
-                            <FormField
-                                control={depositForm.control}
-                                name="amount"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="sr-only">Amount</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="Amount to deposit" {...field} step="any" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                        <CardFooter>
-                             <Button type="submit" className="w-full" disabled={actionLoading['deposit']}>
-                                {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Deposit
-                            </Button>
-                        </CardFooter>
+                 }
+                <Form {...depositForm}>
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                        <FormField
+                            control={depositForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="sr-only">Amount</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Amount to stake" {...field} step="any"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                       <Button type="button" onClick={depositForm.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
+                           {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           Stake
+                       </Button>
                     </form>
                 </Form>
-            </Card>
-        </div>
-        <Card className="lg:col-span-1 row-start-1 lg:row-start-auto">
+                <Separator />
+                <div className="space-y-2 pt-4">
+                    <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                       <Button variant="default" size="sm" className="w-full">
+                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                       </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
+                        </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
+                        </Button>
+                    </div>
+                     <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+                     </Button>
+                </div>
+            </CardContent>
+        </Card>
+        <Card>
             <CardHeader>
-                <CardTitle>Your Game Balance</CardTitle>
-                <CardDescription>Tokens you can play with or withdraw.</CardDescription>
+                <CardTitle>Your Stake</CardTitle>
+                <CardDescription>Tokens you can use or withdraw.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex items-baseline gap-2">
@@ -348,13 +484,13 @@ const Dashboard = () => {
                     }
                 </div>
                  <Form {...withdrawForm}>
-                    <form onSubmit={withdrawForm.handleSubmit(onWithdraw)} className="space-y-4">
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                         <FormField
                             control={withdrawForm.control}
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="sr-only">Withdraw</FormLabel>
+                                    <FormLabel className="sr-only">Amount</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
                                     </FormControl>
@@ -362,17 +498,17 @@ const Dashboard = () => {
                                 </FormItem>
                             )}
                         />
-                         <p className="text-xs text-center text-muted-foreground">A regular 3% GSCB fee applies to all withdrawals.</p>
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button type="submit" variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
+                           <Button type="button" onClick={withdrawForm.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Withdraw
                            </Button>
-                           <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
-                               {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                               Withdraw All
-                           </Button>
                         </div>
+                        <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
+                           {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           Withdraw All
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
                     </form>
                 </Form>
             </CardContent>
@@ -380,18 +516,42 @@ const Dashboard = () => {
       </div>
 
        <div className="text-center pt-8">
-            <h3 className="text-2xl font-bold font-headline mb-4">Ready to Play?</h3>
-            <Button size="lg" className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" onClick={makeMeRich} disabled={actionLoading['deposit'] || actionLoading['makeMeRich'] || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}>
-                {actionLoading['makeMeRich'] ? (
-                  <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-                ) : (
-                  "MakeMeRich, GoldenStern!"
-                )}
-            </Button>
-             {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading &&
+            <h3 className="text-2xl font-bold font-headline mb-4">Ready?</h3>
+            <div className="flex justify-center items-stretch gap-2 max-w-lg mx-auto">
+              <Button 
+                  size="lg" 
+                  className="flex-1 h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
+                  onClick={handleMakeMeRichClick} 
+                  disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
+              >
+                  {getMakeMeRichButtonContent()}
+              </Button>
+              <Button variant="outline" size="lg" className="h-16" onClick={handleShare}>
+                  <Share2 className="mr-2 h-4 w-4" /> Mine Attention
+              </Button>
+            </div>
+             {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
                 <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
              }
         </div>
+        <AlertDialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward game.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+             <div className="flex items-center space-x-2">
+                <Checkbox id="terms" checked={dontRemindAgain} onCheckedChange={(checked) => setDontRemindAgain(checked as boolean)} />
+                <Label htmlFor="terms" className="text-sm text-muted-foreground">Do not remind me again</Label>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmRisk} className="bg-primary hover:bg-primary/90">I understand the risk</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </main>
   );
 };
@@ -460,5 +620,3 @@ export default function GameUI() {
     </div>
   );
 }
-
-    
