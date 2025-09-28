@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "./ui/separator";
+import { useConfig } from "wagmi";
+import { mainnet } from "wagmi/chains";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -253,12 +255,24 @@ const formatCountdown = (seconds: number) => {
 
 
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState } = useWeb3();
-
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress } = useWeb3();
+  const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
 
   const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+
+  const explorerUrl = React.useMemo(() => {
+    const chain = config.chains.find(c => c.id === config.state.chainId);
+    if (!chain || !tokenAddress) return '#';
+    const baseUrl = chain.blockExplorers?.default.url;
+    if (!baseUrl) {
+      // Fallback for custom chains without explorer defined
+      return `https://etherscan.io/token/${tokenAddress}`;
+    }
+    return `${baseUrl}/token/${tokenAddress}`;
+  }, [config.state.chainId, config.chains, tokenAddress]);
+
 
   React.useEffect(() => {
     if (gameData?.nextAvailableTime) {
@@ -338,7 +352,7 @@ const Dashboard = () => {
                          }
                         <Separator />
                         <div className="space-y-2">
-                            <h4 className="font-medium text-sm">Buy/Sell Angl Shards Now</h4>
+                            <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
                             <div className="flex flex-col sm:flex-row gap-2">
                                <Button variant="default" size="sm" className="w-full">
                                     <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
@@ -350,6 +364,9 @@ const Dashboard = () => {
                                     <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                                 </Button>
                             </div>
+                             <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                                <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+                             </Button>
                         </div>
                     </CardContent>
                 </Card>
