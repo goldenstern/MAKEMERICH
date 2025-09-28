@@ -325,6 +325,26 @@ const Dashboard = () => {
     return "MakeMeRich, GoldenStern!";
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: document.title,
+      text: "The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.",
+      url: "https://mmr.angl.money/",
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error("Share failed:", err);
+        // Fallback for browsers that fail to share
+        window.open(shareData.url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      // Fallback for browsers that don't support navigator.share
+      window.open(shareData.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
@@ -458,10 +478,8 @@ const Dashboard = () => {
               >
                   {getMakeMeRichButtonContent()}
               </Button>
-              <Button variant="outline" size="lg" className="h-16" asChild>
-                   <a href="https://mmr.angl.money/" target="_blank" rel="noopener noreferrer">
-                      <Share2 className="mr-2 h-4 w-4" /> Grow
-                   </a>
+              <Button variant="outline" size="lg" className="h-16" onClick={handleShare}>
+                  <Share2 className="mr-2 h-4 w-4" /> Grow
               </Button>
             </div>
              {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
