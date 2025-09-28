@@ -5,7 +5,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet } from "lucide-react";
-
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,11 +240,43 @@ const ConnectWalletView = () => {
   );
 };
 
+const formatCountdown = (seconds: number) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [
+    h > 0 ? h.toString().padStart(2, '0') : null,
+    m.toString().padStart(2, '0'),
+    s.toString().padStart(2, '0'),
+  ].filter(Boolean).join(':');
+};
+
+
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, transactionStatus, getTransactionState } = useWeb3();
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState } = useWeb3();
+
+  const [cooldown, setCooldown] = React.useState(0);
 
   const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+
+  React.useEffect(() => {
+    if (gameData?.nextAvailableTime) {
+      const now = Math.floor(Date.now() / 1000);
+      const remaining = gameData.nextAvailableTime - now;
+      setCooldown(remaining > 0 ? remaining : 0);
+    }
+  }, [gameData?.nextAvailableTime]);
+
+  React.useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setInterval(() => {
+        setCooldown(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [cooldown]);
+
 
   const onDeposit = (data: AmountFormValues) => {
     deposit(data.amount);
@@ -264,19 +295,20 @@ const Dashboard = () => {
 
   const getMakeMeRichButtonContent = () => {
     const state = getTransactionState('makeMeRich');
-    if (!state.isActive) {
-      return "MakeMeRich, GoldenStern!";
+    if (state.isActive) {
+      switch (state.stage) {
+        case 'awaiting_confirmation':
+          return "Awaiting confirmation...";
+        case 'processing':
+          return "Processing...";
+        default:
+          return <Loader2 className="h-8 w-8 animate-spin" />;
+      }
     }
-    switch (state.stage) {
-      case 'awaiting_confirmation':
-        return "Awaiting confirmation...";
-      case 'processing':
-        return "Processing...";
-      case 'done':
-        return "Done!";
-      default:
-        return <Loader2 className="h-8 w-8 animate-spin" />;
+    if (cooldown > 0) {
+      return `Next game in ${formatCountdown(cooldown)}`;
     }
+    return "MakeMeRich, GoldenStern!";
   };
 
 
@@ -404,11 +436,11 @@ const Dashboard = () => {
                 size="lg" 
                 className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
                 onClick={makeMeRich} 
-                disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0)}
+                disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
             >
                 {getMakeMeRichButtonContent()}
             </Button>
-             {(gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading &&
+             {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
                 <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
              }
         </div>

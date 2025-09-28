@@ -15,6 +15,7 @@ export interface GameData {
   minBet: number;
   riskCoefficient: number;
   feePercent: number;
+  nextAvailableTime: number;
 }
 
 type TransactionStage = 'idle' | 'awaiting_confirmation' | 'processing' | 'done' | 'error';
@@ -119,7 +120,7 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = 8;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-    const { data: gameDataResult, isLoading: isGameDataLoading, isFetching: isGameDataFetching, refetch: refetchGameData, isError, error } = useReadContract({
+    const { data: gameDataResult, isLoading: isGameDataLoading, isFetching: isGameDataFetching, refetch: refetchGameData } = useReadContract({
     abi: gameABI,
     address: contractAddress,
     functionName: 'getGameData',
@@ -152,6 +153,7 @@ export function useWeb3Provider(): Web3ContextType {
     minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
     riskCoefficient: 100 - Number((gameDataResult as any)[4]),
     feePercent: feePercentResult ? Number(feePercentResult) : 3,
+    nextAvailableTime: Number((gameDataResult as any)[6]),
   } : null;
 
     useAccountEffect({
@@ -295,6 +297,10 @@ export function useWeb3Provider(): Web3ContextType {
   const makeMeRich = async () => {
     if (!gameData || gameData.playerBalance < gameData.minBet) {
         toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData?.minBet} to play.`});
+        return;
+    }
+    if (gameData.nextAvailableTime && (gameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
+        toast({ variant: "destructive", title: "Cooldown", description: `Please wait for the cooldown to finish.`});
         return;
     }
     try {
