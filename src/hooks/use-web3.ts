@@ -14,6 +14,7 @@ export interface GameData {
   numberOfPlayers: number;
   minBet: number;
   riskCoefficient: number;
+  feePercent: number;
 }
 
 type TransactionStage = 'idle' | 'awaiting_confirmation' | 'processing' | 'done' | 'error';
@@ -131,12 +132,26 @@ export function useWeb3Provider(): Web3ContextType {
     }
     });
 
+  const { data: feePercentResult, refetch: refetchFeePercent } = useReadContract({
+    abi: gameABI,
+    address: contractAddress,
+    functionName: 'feePercent',
+    args: [],
+    account: address,
+    query: {
+      enabled: isConnected && !!address,
+      queryKey: ['feePercent', address],
+      refetchInterval: 30000,
+    },
+  });
+
   const gameData: GameData | null = gameDataResult ? {
     playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
     totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
     numberOfPlayers: Number((gameDataResult as any)[2]),
     minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
     riskCoefficient: 100 - Number((gameDataResult as any)[4]),
+    feePercent: feePercentResult ? Number(feePercentResult) : 3,
   } : null;
 
     useAccountEffect({
@@ -147,6 +162,7 @@ export function useWeb3Provider(): Web3ContextType {
             });
             refetchGameData();
             refetchTokenBalance();
+            refetchFeePercent();
         },
         onDisconnect: () => {
             toast({
@@ -164,7 +180,8 @@ export function useWeb3Provider(): Web3ContextType {
     if(isGameDataFetching || isTokenBalanceFetching) return;
     refetchGameData();
     refetchTokenBalance();
-  }, [refetchGameData, refetchTokenBalance, isGameDataFetching, isTokenBalanceFetching]);
+    refetchFeePercent();
+  }, [refetchGameData, refetchTokenBalance, refetchFeePercent, isGameDataFetching, isTokenBalanceFetching]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
@@ -192,8 +209,7 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ title: "Success", description: "Transaction confirmed." });
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
-      refetchGameData();
-      refetchTokenBalance();
+      refreshData();
 
     } catch (e: any) {
       console.error(e);
@@ -250,11 +266,14 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ variant: "destructive", title: "Invalid amount" });
       return;
     }
+    setLoadingState('withdraw', true);
     try {
       const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
       await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
     } catch (error) {
        // Error is already handled in handleTransaction
+    } finally {
+        setLoadingState('withdraw', false);
     }
   };
 
@@ -263,10 +282,13 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ variant: "destructive", title: "No balance to withdraw" });
       return;
     }
+     setLoadingState('withdrawAll', true);
     try {
       await handleTransaction('withdrawAll', 'withdrawAll', []);
     } catch (error) {
        // Error is already handled in handleTransaction
+    } finally {
+      setLoadingState('withdrawAll', false);
     }
   };
 
