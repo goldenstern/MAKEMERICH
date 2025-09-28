@@ -14,6 +14,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "./ui/separator";
 import { useConfig } from "wagmi";
 import { mainnet } from "wagmi/chains";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -22,6 +34,7 @@ const amountSchema = z.object({
 type AmountFormValues = z.infer<typeof amountSchema>;
 
 const REFRESH_INTERVAL = 30; // in seconds
+const DONT_REMIND_STORAGE_KEY = "mmr-dont-remind-again";
 
 // A component for the confetti effect
 const Confetti = ({ onComplete }: { onComplete: () => void }) => {
@@ -281,6 +294,8 @@ const Dashboard = () => {
   const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress } = useWeb3();
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
+  const [dontRemindAgain, setDontRemindAgain] = React.useState(false);
 
   const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
@@ -313,6 +328,30 @@ const Dashboard = () => {
       return () => clearInterval(timer);
     }
   }, [cooldown]);
+
+  React.useEffect(() => {
+    const savedPreference = localStorage.getItem(DONT_REMIND_STORAGE_KEY);
+    if (savedPreference === 'true') {
+      setDontRemindAgain(true);
+    }
+  }, []);
+
+  const handleMakeMeRichClick = () => {
+    const shouldRemind = !dontRemindAgain && localStorage.getItem(DONT_REMIND_STORAGE_KEY) !== 'true';
+    if (shouldRemind) {
+      setIsRiskDialogOpen(true);
+    } else {
+      makeMeRich();
+    }
+  };
+
+  const handleConfirmRisk = () => {
+    if (dontRemindAgain) {
+      localStorage.setItem(DONT_REMIND_STORAGE_KEY, 'true');
+    }
+    setIsRiskDialogOpen(false);
+    makeMeRich();
+  };
 
 
   const onDeposit = (data: AmountFormValues) => {
@@ -482,19 +521,37 @@ const Dashboard = () => {
               <Button 
                   size="lg" 
                   className="flex-1 h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
-                  onClick={makeMeRich} 
+                  onClick={handleMakeMeRichClick} 
                   disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
               >
                   {getMakeMeRichButtonContent()}
               </Button>
               <Button variant="outline" size="lg" className="h-16" onClick={handleShare}>
-                  <Share2 className="mr-2 h-4 w-4" /> Grow
+                  <Share2 className="mr-2 h-4 w-4" /> Mine Attention
               </Button>
             </div>
              {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
                 <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
              }
         </div>
+        <AlertDialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward game.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+             <div className="flex items-center space-x-2">
+                <Checkbox id="terms" checked={dontRemindAgain} onCheckedChange={(checked) => setDontRemindAgain(checked as boolean)} />
+                <Label htmlFor="terms" className="text-sm text-muted-foreground">Do not remind me again</Label>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmRisk} className="bg-primary hover:bg-primary/90">I understand the risk</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </main>
   );
 };
