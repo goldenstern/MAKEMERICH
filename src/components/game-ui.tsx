@@ -4,7 +4,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2 } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -182,6 +182,11 @@ const Header = () => {
             <Link className="h-4 w-4" />
             Visit AnglVerse Website
         </a>
+        <Button variant="outline" size="sm" asChild className="hidden md:flex">
+             <a href="https://mmr.angl.money/" target="_blank" rel="noopener noreferrer">
+                <Share2 className="mr-2 h-4 w-4" /> Share/Grow
+             </a>
+        </Button>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
@@ -268,7 +273,7 @@ const Dashboard = () => {
     const baseUrl = chain.blockExplorers?.default.url;
     if (!baseUrl) {
       // Fallback for custom chains without explorer defined
-      return `https://etherscan.io/token/${tokenAddress}`;
+      return `https://bscscan.com/token/${tokenAddress}`;
     }
     return `${baseUrl}/token/${tokenAddress}`;
   }, [config.state.chainId, config.chains, tokenAddress]);
@@ -355,7 +360,7 @@ const Dashboard = () => {
                             <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
                             <div className="flex flex-col sm:flex-row gap-2">
                                <Button variant="default" size="sm" className="w-full">
-                                    <a href="https://gscb.io/b9668481" target="_blank" rel="noopener noreferrer">GSCB</a>
+                                    <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
                                </Button>
                                 <Button variant="default" size="sm" className="w-full">
                                     <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
@@ -373,7 +378,7 @@ const Dashboard = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Stake Tokens</CardTitle>
-                        <CardDescription>Stake tokens from your wallet to the MMR AI.</CardDescription>
+                        <CardDescription>Stake tokens from your wallet to the MMR.</CardDescription>
                     </CardHeader>
                      <Form {...depositForm}>
                         <form onSubmit={depositForm.handleSubmit(onDeposit)}>
@@ -448,7 +453,7 @@ const Dashboard = () => {
       </div>
 
        <div className="text-center pt-8">
-            <h3 className="text-2xl font-bold font-headline mb-4">Ready to Play?</h3>
+            <h3 className="text-2xl font-bold font-headline mb-4">Ready?</h3>
             <Button 
                 size="lg" 
                 className="h-16 text-xl font-bold w-full max-w-md shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
