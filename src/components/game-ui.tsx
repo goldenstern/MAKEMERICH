@@ -273,7 +273,7 @@ const Header = () => {
         <div className="flex items-center sm:gap-4 justify-between sm:justify-start">
           <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <Link className="h-4 w-4" />
-              AnglVerse Website
+              AnglVerse Ecosystem
           </a>
 
           <div className="flex items-center gap-4">
