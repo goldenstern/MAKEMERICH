@@ -4,8 +4,12 @@ import * as React from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet, sepolia } from 'wagmi/chains';
 import { defineChain } from 'viem';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Web3Context, useWeb3Provider } from "@/hooks/use-web3";
+import { metaMask } from '@wagmi/connectors';
+
+// Create a client
+const queryClient = new QueryClient();
 
 // Получаем переменные окружения
 const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111', 10);
@@ -26,6 +30,7 @@ const selectedChain = chainId === mainnet.id ? mainnet : chainId === sepolia.id 
 
 const config = createConfig({
   chains: [selectedChain],
+  connectors: [metaMask()],
   transports: {
     [selectedChain.id]: http(),
   },
@@ -43,9 +48,11 @@ const Web3ProviderContent = ({ children }: { children: React.ReactNode }) => {
 export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     return (
         <WagmiProvider config={config}>
-            <Web3ProviderContent>
-                {children}
-            </Web3ProviderContent>
+            <QueryClientProvider client={queryClient}>
+                <Web3ProviderContent>
+                    {children}
+                </Web3ProviderContent>
+            </QueryClientProvider>
         </WagmiProvider>
     );
 };

@@ -472,7 +472,7 @@ const Dashboard = () => {
           </div>
            <Card>
                 <CardHeader>
-                     <CardTitle className="text-sm font-medium">Buy/Sell Angl Shards (ANGLS) Now</CardTitle>
+                     <CardTitle className="text-sm font-medium">Buy/Sell Angl Shards (ANGLS) Now & DYOR</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -487,14 +487,14 @@ const Dashboard = () => {
                         </Button>
                     </div>
                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
+                            Litepaper
+                         </Button>
                          <Button variant="outline" size="sm" className="w-full" asChild>
                             <a href={tokenExplorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
                          </Button>
                          <Button variant="outline" size="sm" className="w-full" asChild>
                             <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool Contract</a>
-                         </Button>
-                          <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
-                            Litepaper
                          </Button>
                      </div>
                 </CardContent>

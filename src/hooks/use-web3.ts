@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance, useAccountEffect, useConfig } from 'wagmi';
-import { injected } from 'wagmi/connectors';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useAccountEffect, useConfig } from 'wagmi';
+import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { gameABI } from '@/lib/abi';
@@ -105,7 +105,7 @@ export function useWeb3Provider(): Web3ContextType {
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
   const connectWallet = () => {
-    connect({ connector: injected() });
+    connect({ connector: metaMask() });
   };
 
   const disconnectWallet = () => {
@@ -124,8 +124,9 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = 8;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-  const getAIData = useCallback(async () => {
-    if (!isConnected || !address) return null;
+  const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
+    const addressToUse = currentAddress || address;
+    if (!isConnected || !addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -133,7 +134,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: contractAddress,
             functionName: 'getAIData',
             args: [],
-            account: address,
+            account: addressToUse,
         });
 
         const feePercentResult = await readContract(wagmiConfig, {
@@ -141,7 +142,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: contractAddress,
             functionName: 'feePercent',
             args: [],
-            account: address,
+            account: addressToUse,
         });
 
         const data: GameData = {
@@ -171,7 +172,7 @@ export function useWeb3Provider(): Web3ContextType {
                 title: "Wallet Connected",
                 description: `Welcome, ${data.address}`,
             });
-            getAIData();
+            getAIData(data.address);
             refetchTokenBalance();
         },
         onDisconnect: () => {
@@ -327,7 +328,12 @@ export function useWeb3Provider(): Web3ContextType {
   const makeMeRich = async () => {
     const freshGameData = await refreshData();
 
-    if (!freshGameData || freshGameData.playerBalance < freshGameData.minBet) {
+    if (!freshGameData) {
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch latest game data."});
+        return;
+    }
+
+    if (freshGameData.playerBalance < freshGameData.minBet) {
         toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${freshGameData?.minBet} to play.`});
         return;
     }
