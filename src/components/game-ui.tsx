@@ -332,8 +332,8 @@ const ConnectWalletView = () => {
       <div className="bg-accent rounded-full p-4 mb-6 flex items-center justify-center w-24 h-24">
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
-      <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm to double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The dApp where you can multiply your tokens or lose them all. High risk, high reward!</p>
+      <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich, AI</h2>
+      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm so double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The dApp where you can multiply your tokens or lose them all. High risk, high reward!</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet

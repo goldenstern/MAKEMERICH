@@ -2,8 +2,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
-const title = 'MakeMeRich, GoldenStern!';
-const description = 'The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.';
+const title = 'MakeMeRich, AI';
+const description = 'The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm so double it or loose.';
 
 export const metadata: Metadata = {
   title,
