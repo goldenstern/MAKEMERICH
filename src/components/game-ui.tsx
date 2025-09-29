@@ -242,7 +242,7 @@ const Header = () => {
 };
 
 const StatCard = ({ icon: Icon, title, value, isLoading, unit }: { icon: React.ElementType, title: string, value: string | number, isLoading: boolean, unit?: string }) => (
-  <div className="p-4 border rounded-lg">
+  <div className="p-4 border-0">
     <div className="flex items-center justify-between mb-2">
       <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
       <Icon className="h-4 w-4 text-muted-foreground" />
@@ -410,8 +410,8 @@ const Dashboard = () => {
         <div className="space-y-4 md:col-span-2 lg:col-span-1">
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-            <StatCard icon={Users} title="Mined Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-            <StatCard icon={ArrowDownRight} title="Minimum Stake (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Users} title="Attention Pool" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+            <StatCard icon={ArrowDownRight} title="Current Minimum Stake" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
             <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
           </div>
            <Card>
@@ -438,7 +438,7 @@ const Dashboard = () => {
         </div>
         <Card className="md:col-span-2 lg:col-span-1">
             <CardHeader>
-                <CardTitle>Your Stake & Wallet</CardTitle>
+                <CardTitle>Stake & Wallet</CardTitle>
                 <CardDescription>Manage your staked tokens and wallet balance.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -449,9 +449,9 @@ const Dashboard = () => {
                         <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
                         }
                     </div>
-                     <p className="text-sm text-muted-foreground">
+                     <div className="text-sm text-muted-foreground">
                         In Wallet: {isLoading ? <Skeleton className="h-4 w-24 inline-block" /> : <span>{formattedTokenBalance} {tokenSymbol}</span>}
-                    </p>
+                    </div>
                 </div>
                  <Form {...amountForm}>
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
@@ -482,17 +482,18 @@ const Dashboard = () => {
                            {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                            Withdraw All
                         </Button>
-                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
+                        <Separator />
+                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
                     </form>
                 </Form>
-                 <Separator />
+                 
                
             </CardContent>
         </Card>
       </div>
 
        <div className="text-center pt-8">
-            <h3 className="text-2xl font-bold font-headline mb-4">Ready?</h3>
+            <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
             <div className="flex justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
                   size="lg" 
