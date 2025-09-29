@@ -1,9 +1,11 @@
+
 "use client";
 
 import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import ReactMarkdown from 'react-markdown';
 import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2 } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "./ui/separator";
 import { useConfig } from "wagmi";
-import { mainnet } from "wagmi/chains";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -134,6 +143,48 @@ const Tears = ({ onComplete }: { onComplete: () => void }) => {
   return <>{drops}</>;
 };
 
+const LitepaperDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) => {
+  const [markdown, setMarkdown] = React.useState('');
+
+  React.useEffect(() => {
+    if (open) {
+      fetch('/LitepaperEN.md')
+        .then(response => response.text())
+        .then(text => setMarkdown(text));
+    }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>MakeMeRich, AI: Litepaper</DialogTitle>
+          <DialogDescription>
+            Crowd Wisdom Utopian Money AI
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="h-[70vh] w-full pr-6">
+          <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                h1: ({node, ...props}) => <h1 className="text-2xl font-bold font-headline mt-6 mb-2" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-xl font-bold font-headline mt-4 mb-2 border-b pb-1" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-lg font-semibold font-headline mt-4" {...props} />,
+                p: ({node, ...props}) => <p className="leading-relaxed my-2" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
+                em: ({node, ...props}) => <em className="italic" {...props} />,
+                code: ({node, ...props}) => <code className="bg-muted text-muted-foreground rounded px-1 py-0.5 text-sm" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-2" {...props} />,
+                hr: ({node, ...props}) => <hr className="my-4 border-border" {...props} />,
+              }}
+            >{markdown}</ReactMarkdown>
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 const RefreshTimer = () => {
     const { isDataFetching, refreshData } = useWeb3();
@@ -208,16 +259,12 @@ const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
             <span className="text-primary text-3xl font-bold">⨻</span>
-            <h1 className="text-xl font-bold font-headline">MakeMeRich, GoldenStern!</h1>
+            <h1 className="text-xl font-bold font-headline">MakeMeRich, AI</h1>
         </div>
         <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Link className="h-4 w-4" />
             Visit AnglVerse Website
         </a>
-        <Button variant="link" size="sm" onClick={handleShare} className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Share2 className="h-4 w-4" />
-            Share/Grow
-        </Button>
       </div>
       {isClient && isConnected ? (
         <div className="flex items-center gap-4">
@@ -246,19 +293,20 @@ const Header = () => {
 };
 
 const StatCard = ({ icon: Icon, title, value, isLoading, unit }: { icon: React.ElementType, title: string, value: string | number, isLoading: boolean, unit?: string }) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+  <div className="p-4 border-0">
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
       <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
+    </div>
+    <Separator />
+    <div className="mt-2">
       {isLoading ? <Skeleton className="h-8 w-3/4" /> : (
         <div className="text-2xl font-bold">
-          {value} <span className="text-sm text-muted-foreground">{unit}</span>
+          {value} <span className="text-sm font-normal text-muted-foreground">{unit}</span>
         </div>
       )}
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 );
 
 const ConnectWalletView = () => {
@@ -291,25 +339,28 @@ const formatCountdown = (seconds: number) => {
 
 
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress } = useWeb3();
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress, contractAddress } = useWeb3();
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
   const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
+  const [isLitepaperOpen, setIsLitepaperOpen] = React.useState(false);
   const [dontRemindAgain, setDontRemindAgain] = React.useState(false);
 
-  const depositForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
-  const withdrawForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
+  const amountForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   
   const explorerUrl = React.useMemo(() => {
     const chain = config.chains.find(c => c.id === config.state.chainId);
-    if (!chain || !tokenAddress) return '#';
+    if (!chain) return '#';
     const baseUrl = chain.blockExplorers?.default.url;
     if (!baseUrl) {
       // Fallback for custom chains without explorer defined
-      return `https://bscscan.com/token/${tokenAddress}`;
+      return `https://bscscan.com`;
     }
-    return `${baseUrl}/token/${tokenAddress}`;
-  }, [config.state.chainId, config.chains, tokenAddress]);
+    return baseUrl;
+  }, [config.state.chainId, config.chains]);
+
+  const tokenExplorerUrl = tokenAddress ? `${explorerUrl}/token/${tokenAddress}` : `${explorerUrl}`;
+  const poolExplorerUrl = contractAddress ? `${explorerUrl}/address/${contractAddress}` : `${explorerUrl}`;
 
 
   React.useEffect(() => {
@@ -356,12 +407,12 @@ const Dashboard = () => {
 
   const onDeposit = (data: AmountFormValues) => {
     deposit(data.amount);
-    depositForm.reset();
+    amountForm.reset();
   };
 
   const onWithdraw = (data: AmountFormValues) => {
     withdraw(data.amount);
-    withdrawForm.reset();
+    amountForm.reset();
   };
   
   const formattedTokenBalance = parseFloat(tokenBalance).toLocaleString(undefined, {
@@ -382,9 +433,9 @@ const Dashboard = () => {
       }
     }
     if (cooldown > 0) {
-      return `Next block in ${formatCountdown(cooldown)}`;
+      return `Next MMR AI block in ${formatCountdown(cooldown)}`;
     }
-    return "MakeMeRich, GoldenStern!";
+    return "MakeMeRich, AI";
   };
 
   const handleShare = async () => {
@@ -407,53 +458,23 @@ const Dashboard = () => {
     }
   };
 
+  const isBalanceInsufficient = (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0);
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-        <StatCard icon={Users} title="Mined Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-        <StatCard icon={ArrowDownRight} title="Minimum Stake (24h)" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-        <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
-      </div>
-
       <div className="grid gap-8 md:grid-cols-2">
-        <Card>
-            <CardHeader>
-                <CardTitle>Your Wallet</CardTitle>
-                <CardDescription>Your available token balance.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold">{formattedTokenBalance}</span>
-                        <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span>
-                    </div>
-                 }
-                <Form {...depositForm}>
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                        <FormField
-                            control={depositForm.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="sr-only">Amount</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="Amount to stake" {...field} step="any"/>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                       <Button type="button" onClick={depositForm.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
-                           {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                           Stake
-                       </Button>
-                    </form>
-                </Form>
-                <Separator />
-                <div className="space-y-2 pt-4">
-                    <h4 className="font-medium text-sm">Buy/Sell Angl Shards (ANGLS) Now</h4>
+        <div className="space-y-4 md:col-span-2 lg:col-span-1">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Users} title="Pool Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+            <StatCard icon={ArrowDownRight} title="Minimum Stake" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
+          </div>
+           <Card>
+                <CardHeader>
+                     <CardTitle className="text-sm font-medium">Buy/Sell Angl Shards (ANGLS) Now & DYOR</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
                     <div className="flex flex-col sm:flex-row gap-2">
                        <Button variant="default" size="sm" className="w-full">
                             <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
@@ -465,41 +486,58 @@ const Dashboard = () => {
                             <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                         </Button>
                     </div>
-                     <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
-                     </Button>
-                </div>
-            </CardContent>
-        </Card>
-        <Card>
+                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
+                            Litepaper
+                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <a href={tokenExplorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool Contract</a>
+                         </Button>
+                     </div>
+                </CardContent>
+            </Card>
+        </div>
+        <Card className="md:col-span-2 lg:col-span-1">
             <CardHeader>
-                <CardTitle>Your Stake</CardTitle>
-                <CardDescription>Tokens you can use or withdraw.</CardDescription>
+                <CardTitle>Stake & Wallet</CardTitle>
+                <CardDescription>Manage your staked tokens and wallet balance.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex items-baseline gap-2">
-                    {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                      <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
-                      <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
-                    }
+                <div className="space-y-1">
+                    <div className="flex items-baseline gap-2">
+                        {isLoading ? <Skeleton className="h-10 w-1/2" /> :
+                        <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
+                        <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
+                        }
+                    </div>
+                     <div className="text-sm text-muted-foreground">
+                        In Wallet: {isLoading ? <Skeleton className="h-4 w-24 inline-block" /> : <span>{formattedTokenBalance} {tokenSymbol}</span>}
+                    </div>
                 </div>
-                 <Form {...withdrawForm}>
+                 <Form {...amountForm}>
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                         <FormField
-                            control={withdrawForm.control}
+                            control={amountForm.control}
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="sr-only">Amount</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="Amount to withdraw" {...field} step="any"/>
+                                        <Input type="number" placeholder="Amount" {...field} step="any"/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                         <div className="flex flex-col sm:flex-row gap-2">
-                           <Button type="button" onClick={withdrawForm.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
+                            <Button type="button" onClick={amountForm.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
+                               {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                               Stake
+                           </Button>
+                           <Button type="button" onClick={amountForm.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Withdraw
                            </Button>
@@ -508,38 +546,44 @@ const Dashboard = () => {
                            {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                            Withdraw All
                         </Button>
-                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB fee applies to all withdrawals.</p>
+                        <Separator />
+                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
                     </form>
                 </Form>
+                 
+               
             </CardContent>
         </Card>
       </div>
 
        <div className="text-center pt-8">
-            <h3 className="text-2xl font-bold font-headline mb-4">Ready?</h3>
+            {isBalanceInsufficient && !isLoading && cooldown === 0 ? (
+                <h3 className="text-2xl font-bold font-headline mb-4 text-destructive">
+                    You need at least {gameData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
+                </h3>
+            ) : (
+                <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
+            )}
             <div className="flex justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
                   size="lg" 
                   className="flex-1 h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
                   onClick={handleMakeMeRichClick} 
-                  disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
+                  disabled={getTransactionState('makeMeRich').isActive || isBalanceInsufficient || cooldown > 0}
               >
                   {getMakeMeRichButtonContent()}
               </Button>
               <Button variant="outline" size="lg" className="h-16" onClick={handleShare}>
-                  <Share2 className="mr-2 h-4 w-4" /> Mine Attention
+                  <Share2 className="mr-2 h-4 w-4" /> Farm Attention
               </Button>
             </div>
-             {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
-                <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your game balance to play.</p>
-             }
         </div>
         <AlertDialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward game.
+                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward opportunity.
               </AlertDialogDescription>
             </AlertDialogHeader>
              <div className="flex items-center space-x-2">
@@ -552,6 +596,7 @@ const Dashboard = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <LitepaperDialog open={isLitepaperOpen} onOpenChange={setIsLitepaperOpen} />
     </main>
   );
 };

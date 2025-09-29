@@ -6,6 +6,10 @@ import { mainnet, sepolia } from 'wagmi/chains';
 import { defineChain } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Web3Context, useWeb3Provider } from "@/hooks/use-web3";
+import { metaMask } from '@wagmi/connectors';
+
+// Create a client
+const queryClient = new QueryClient();
 
 // Получаем переменные окружения
 const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111', 10);
@@ -26,12 +30,11 @@ const selectedChain = chainId === mainnet.id ? mainnet : chainId === sepolia.id 
 
 const config = createConfig({
   chains: [selectedChain],
+  connectors: [metaMask()],
   transports: {
     [selectedChain.id]: http(),
   },
 });
-
-const queryClient = new QueryClient();
 
 const Web3ProviderContent = ({ children }: { children: React.ReactNode }) => {
     const value = useWeb3Provider();

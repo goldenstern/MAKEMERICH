@@ -1,11 +1,12 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useBalance, useAccountEffect, useConfig } from 'wagmi';
-import { injected } from 'wagmi/connectors';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useAccountEffect, useConfig } from 'wagmi';
+import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits } from 'viem';
-import { waitForTransactionReceipt } from 'wagmi/actions'
+import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { gameABI } from '@/lib/abi';
 
 export interface GameData {
@@ -47,7 +48,7 @@ export interface Web3ContextType {
   withdraw: (amount: number) => Promise<void>;
   withdrawAll: () => Promise<void>;
   makeMeRich: () => Promise<void>;
-  refreshData: () => void;
+  refreshData: () => Promise<GameData | null>;
   clearTransactionStatus: () => void;
   getTransactionState: (action: string) => TransactionState;
   contractAddress?: string;
@@ -77,6 +78,9 @@ export function useWeb3Provider(): Web3ContextType {
   const wagmiConfig = useConfig();
   
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
+  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [isDataFetching, setIsDataFetching] = useState(false);
+
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
     setTransactionStates(prev => ({
@@ -101,7 +105,7 @@ export function useWeb3Provider(): Web3ContextType {
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
   const connectWallet = () => {
-    connect({ connector: injected() });
+    connect({ connector: metaMask() });
   };
 
   const disconnectWallet = () => {
@@ -120,41 +124,47 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = 8;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-    const { data: gameDataResult, isLoading: isGameDataLoading, isFetching: isGameDataFetching, refetch: refetchGameData } = useReadContract({
-    abi: gameABI,
-    address: contractAddress,
-    functionName: 'getGameData',
-    args: [],
-    account: address, 
-    query: {
-        enabled: isConnected && !!address,
-        queryKey: ['getGameData', address], 
-        refetchInterval: 30000,
+  const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
+    const addressToUse = currentAddress || address;
+    if (!isConnected || !addressToUse) return null;
+    setIsDataFetching(true);
+    try {
+        const gameDataResult = await readContract(wagmiConfig, {
+            abi: gameABI,
+            address: contractAddress,
+            functionName: 'getAIData',
+            args: [],
+            account: addressToUse,
+        });
+
+        const feePercentResult = await readContract(wagmiConfig, {
+            abi: gameABI,
+            address: contractAddress,
+            functionName: 'feePercent',
+            args: [],
+            account: addressToUse,
+        });
+
+        const data: GameData = {
+            playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
+            totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
+            numberOfPlayers: Number((gameDataResult as any)[2]),
+            minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
+            riskCoefficient: 100 - Number((gameDataResult as any)[4]),
+            feePercent: feePercentResult ? Number(feePercentResult) : 3,
+            nextAvailableTime: Number((gameDataResult as any)[6]),
+        };
+        setGameData(data);
+        return data;
+    } catch (e) {
+        console.error("Error fetching game data:", e);
+        setGameData(null);
+        return null;
+    } finally {
+        setIsDataFetching(false);
     }
-    });
+  }, [isConnected, address, wagmiConfig]);
 
-  const { data: feePercentResult, refetch: refetchFeePercent } = useReadContract({
-    abi: gameABI,
-    address: contractAddress,
-    functionName: 'feePercent',
-    args: [],
-    account: address,
-    query: {
-      enabled: isConnected && !!address,
-      queryKey: ['feePercent', address],
-      refetchInterval: 30000,
-    },
-  });
-
-  const gameData: GameData | null = gameDataResult ? {
-    playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
-    totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
-    numberOfPlayers: Number((gameDataResult as any)[2]),
-    minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
-    riskCoefficient: 100 - Number((gameDataResult as any)[4]),
-    feePercent: feePercentResult ? Number(feePercentResult) : 3,
-    nextAvailableTime: Number((gameDataResult as any)[6]),
-  } : null;
 
     useAccountEffect({
         onConnect: (data) => {
@@ -162,32 +172,43 @@ export function useWeb3Provider(): Web3ContextType {
                 title: "Wallet Connected",
                 description: `Welcome, ${data.address}`,
             });
-            refetchGameData();
+            getAIData(data.address);
             refetchTokenBalance();
-            refetchFeePercent();
         },
         onDisconnect: () => {
             toast({
                 title: "Wallet Disconnected",
             });
+            setGameData(null);
         },
     });
+
+    useEffect(() => {
+        if(isConnected && address) {
+            getAIData();
+            const interval = setInterval(() => {
+                getAIData();
+                refetchTokenBalance();
+            }, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [isConnected, address, getAIData, refetchTokenBalance]);
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
       reset();
   };
 
-  const refreshData = useCallback(() => {
-    if(isGameDataFetching || isTokenBalanceFetching) return;
-    refetchGameData();
-    refetchTokenBalance();
-    refetchFeePercent();
-  }, [refetchGameData, refetchTokenBalance, refetchFeePercent, isGameDataFetching, isTokenBalanceFetching]);
+  const refreshData = useCallback(async (): Promise<GameData | null> => {
+    if(isDataFetching) return gameData;
+    const freshGameData = await getAIData();
+    await refetchTokenBalance();
+    return freshGameData;
+  }, [getAIData, refetchTokenBalance, isDataFetching, gameData]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
-    if (!isConnected) {
+    if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
     }
@@ -198,6 +219,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: contractAddress,
             functionName,
             args,
+            account: address,
         });
       setTransactionState(action, 'processing');
       toast({ title: customToastTitle || "Transaction Sent", description: "Waiting for confirmation..." });
@@ -211,7 +233,7 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ title: "Success", description: "Transaction confirmed." });
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
-      refreshData();
+      await refreshData();
 
     } catch (e: any) {
       console.error(e);
@@ -225,6 +247,8 @@ export function useWeb3Provider(): Web3ContextType {
 
   const deposit = async (amount: number) => {
     if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
+    if (!address) return toast({ variant: "destructive", title: "Wallet not connected" });
+    
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
     setLoadingState('deposit', true);
@@ -240,6 +264,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: tokenAddress,
             functionName: 'approve',
             args: [contractAddress, amountInUnits],
+            account: address,
         });
         
         setTransactionState('deposit', 'processing');
@@ -301,11 +326,18 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const makeMeRich = async () => {
-    if (!gameData || gameData.playerBalance < gameData.minBet) {
-        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData?.minBet} to play.`});
+    const freshGameData = await refreshData();
+
+    if (!freshGameData) {
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch latest game data."});
         return;
     }
-    if (gameData.nextAvailableTime && (gameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
+
+    if (freshGameData.playerBalance < freshGameData.minBet) {
+        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${freshGameData?.minBet} to play.`});
+        return;
+    }
+    if (freshGameData.nextAvailableTime && (freshGameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
         toast({ variant: "destructive", title: "Cooldown", description: `Please wait for the cooldown to finish.`});
         return;
     }
@@ -316,9 +348,7 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (isConnected && isGameDataLoading && !gameDataResult);
-  const isDataFetching = (isGameDataFetching || isTokenBalanceFetching);
-
+  const isLoading = isConnecting || (isConnected && isTokenBalanceLoading && !gameData);
 
   return {
     isConnected,
