@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -46,6 +45,7 @@ type AmountFormValues = z.infer<typeof amountSchema>;
 
 const REFRESH_INTERVAL = 30; // in seconds
 const DONT_REMIND_STORAGE_KEY = "mmr-dont-remind-again";
+const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 // A component for the confetti effect
 const Confetti = ({ onComplete }: { onComplete: () => void }) => {
@@ -629,45 +629,45 @@ export default function GameUI() {
     setIsClient(true);
   }, []);
 
-  const prevPlayerBalance = React.useRef<number | undefined>();
-  const isCheckingWin = React.useRef(false);
+  const hasCheckedWin = React.useRef(false);
 
   React.useEffect(() => {
-    if (transactionStatus.action === 'makeMeRich' && transactionStatus.status === 'confirmed') {
-      isCheckingWin.current = true;
-      // We don't check for win here, we wait for the data to be fetched
-    }
-  }, [transactionStatus]);
+    if (
+      transactionStatus.action === 'makeMeRich' &&
+      transactionStatus.status === 'confirmed' &&
+      !isDataFetching &&
+      gameData &&
+      !hasCheckedWin.current
+    ) {
+      hasCheckedWin.current = true;
+      const prevBalanceStr = localStorage.getItem(MMR_PREV_BALANCE_KEY);
 
-  React.useEffect(() => {
-    // This effect runs when gameData changes.
-    if (isCheckingWin.current && !isDataFetching && gameData) {
-      const currentBalance = gameData.playerBalance;
-      const previousBalance = prevPlayerBalance.current;
-      
-      if (previousBalance !== undefined) {
-          if (currentBalance > previousBalance) {
-            setShowConfetti(true);
-            toast({ title: "You Won!", description: "Your stake has been doubled." });
-          } else if (currentBalance < previousBalance) {
-            setShowTears(true);
-            toast({ variant: "destructive", title: "You Lost...", description: "Your stake is gone. Better luck next time!" });
-          } else {
-            // This case might happen if the transaction somehow resulted in no change
-            toast({ title: "Transaction Confirmed", description: "Your balance is unchanged." });
-          }
+      if (prevBalanceStr) {
+        const prevBalance = parseFloat(prevBalanceStr);
+        const currentBalance = gameData.playerBalance;
+
+        if (currentBalance > prevBalance) {
+          setShowConfetti(true);
+          toast({ title: "You Won!", description: "Your stake has been doubled." });
+        } else if (currentBalance < prevBalance) {
+          setShowTears(true);
+          toast({ variant: "destructive", title: "You Lost...", description: "Your stake is gone. Better luck next time!" });
+        } else {
+           toast({ title: "Transaction Confirmed", description: "Your balance is unchanged." });
+        }
+        localStorage.removeItem(MMR_PREV_BALANCE_KEY);
       }
       
-      // Reset flags and clear status
-      isCheckingWin.current = false;
       clearTransactionStatus();
     }
-    
-    // Always update the previous balance when gameData is available and not fetching
-    if (gameData && !isDataFetching) {
-      prevPlayerBalance.current = gameData.playerBalance;
-    }
-  }, [gameData, isDataFetching, clearTransactionStatus, toast]);
+  }, [transactionStatus, isDataFetching, gameData, clearTransactionStatus, toast]);
+
+  // Reset the check flag if the transaction is no longer active
+  React.useEffect(() => {
+      if (transactionStatus.status !== 'confirmed') {
+          hasCheckedWin.current = false;
+      }
+  }, [transactionStatus]);
 
 
   return (

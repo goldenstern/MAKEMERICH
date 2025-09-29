@@ -68,7 +68,7 @@ export const useWeb3 = () => {
 
 const contractAddress = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) || '0x';
 const tokenAddress = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS as `0x${string}`) || '0x';
-
+const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
@@ -351,9 +351,17 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const makeMeRich = async () => {
+    if (!gameData) {
+      toast({ variant: "destructive", title: "Error", description: "Game data not loaded." });
+      return;
+    }
     try {
+      // Save balance to local storage before transaction
+      localStorage.setItem(MMR_PREV_BALANCE_KEY, gameData.playerBalance.toString());
       await handleTransaction('makeMeRich', 'makeMeRich', [], { showSuccessToast: false });
     } catch (error) {
+      // Clear local storage if transaction fails
+      localStorage.removeItem(MMR_PREV_BALANCE_KEY);
     }
   };
 
