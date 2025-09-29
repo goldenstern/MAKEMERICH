@@ -240,6 +240,9 @@ export function useWeb3Provider(): Web3ContextType {
         const errorMessage = e.shortMessage || e.message;
         if (errorMessage.includes('User rejected the request')) {
             toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
+        } else if (errorMessage.includes('reason:')) {
+            const reason = errorMessage.substring(errorMessage.indexOf('reason:') + 8).replace(/"/g, '');
+            toast({ variant: "destructive", title: "Transaction Error", description: reason });
         } else {
             toast({ variant: "destructive", title: "Transaction Error", description: errorMessage });
         }
@@ -289,12 +292,14 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        console.error(e);
         const errorMessage = e.shortMessage || e.message;
         if (!errorMessage.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Stake Error", description: errorMessage });
-        } else {
-             toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
+             if (errorMessage.includes('reason:')) {
+                const reason = errorMessage.substring(errorMessage.indexOf('reason:') + 8).replace(/"/g, '');
+                toast({ variant: "destructive", title: "Stake Error", description: reason });
+            } else {
+                toast({ variant: "destructive", title: "Stake Error", description: errorMessage });
+            }
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -388,3 +393,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+    
