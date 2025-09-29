@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
@@ -80,6 +80,7 @@ export function useWeb3Provider(): Web3ContextType {
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
+  const hasShownConnectToast = useRef(false);
 
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
@@ -105,19 +106,15 @@ export function useWeb3Provider(): Web3ContextType {
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
   const connectWallet = () => {
-    connect({ connector: metaMask() });
+    if (!isConnected) {
+      connect({ connector: metaMask() });
+    }
   };
 
   const disconnectWallet = () => {
     disconnect();
-    // This is the critical fix: forcefully clear wagmi's cache from localStorage.
-    // This prevents it from "remembering" and auto-connecting to previous wallets.
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('wagmi.')) {
-        localStorage.removeItem(key);
-      }
-    });
-    setGameData(null);
+    setGameData(null); 
+    hasShownConnectToast.current = false;
     toast({ title: "Wallet Disconnected" });
   };
 
@@ -136,7 +133,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!isConnected || !addressToUse) return null;
+    if (!addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -173,16 +170,20 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, isConnected, wagmiConfig]);
+  }, [address, wagmiConfig]);
 
 
   useEffect(() => {
     if (isConnected && address) {
+      if (!hasShownConnectToast.current) {
+          toast({ title: "Wallet Connected" });
+          hasShownConnectToast.current = true;
+      }
       getAIData(address);
       refetchTokenBalance();
     } else {
-      // If disconnected, ensure game data is cleared.
       setGameData(null);
+      hasShownConnectToast.current = false;
     }
   }, [address, isConnected, getAIData, refetchTokenBalance]);
 
@@ -263,9 +264,8 @@ export function useWeb3Provider(): Web3ContextType {
         }
        
         setTransactionState(action, 'error');
-        // Reset state after a short delay to allow user to see the error state
         setTimeout(() => setTransactionState(action, 'idle'), 2000);
-        throw new Error(reason); // re-throw to be caught by caller
+        throw new Error(reason); 
     }
   };
 
@@ -308,10 +308,8 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (!e.message.includes('An unknown error occurred')) {
-            // Error is already handled by handleTransaction's catch block or the user rejection toast
-        } else {
-            toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
+        if (!e.message?.includes('User rejected the request') && !e.message?.includes('denied transaction')) {
+           toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -330,7 +328,6 @@ export function useWeb3Provider(): Web3ContextType {
       const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
       await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
     } catch (error) {
-       // Error is already handled/toasted in handleTransaction
     } finally {
         setLoadingState('withdraw', false);
     }
@@ -345,7 +342,6 @@ export function useWeb3Provider(): Web3ContextType {
     try {
       await handleTransaction('withdrawAll', 'withdrawAll', []);
     } catch (error) {
-       // Error is already handled/toasted in handleTransaction
     } finally {
       setLoadingState('withdrawAll', false);
     }
@@ -374,7 +370,6 @@ export function useWeb3Provider(): Web3ContextType {
     try {
       await handleTransaction('makeMeRich', 'makeMeRich', [], { showSuccessToast: false });
     } catch (error) {
-      // Error is already handled/toasted in handleTransaction
     }
   };
 
