@@ -245,23 +245,22 @@ export function useWeb3Provider(): Web3ContextType {
           const revertError = e.walk(
             (err) => err instanceof ContractFunctionRevertedError
           );
+          const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
+
           if (revertError instanceof ContractFunctionRevertedError) {
-            reason = revertError.reason ?? reason;
+            reason = revertError.reason ?? "An unknown contract error occurred.";
+          } else if (userRejectedError instanceof UserRejectedRequestError) {
+              reason = "User rejected the request";
           } else {
-             const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
-              if (userRejectedError instanceof UserRejectedRequestError) {
-                  reason = "User rejected the request";
-              } else {
-                  reason = e.shortMessage;
-              }
+              reason = e.shortMessage.replace('execution reverted: ', '');
           }
         }
         
         if (reason.includes('User rejected the request')) {
             toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
         } else {
-            const finalReason = reason.replace('execution reverted: ', '');
-            toast({ variant: "destructive", title: "Transaction Error", description: finalReason.charAt(0).toUpperCase() + finalReason.slice(1) });
+            const finalReason = reason.charAt(0).toUpperCase() + reason.slice(1);
+            toast({ variant: "destructive", title: "Transaction Error", description: finalReason });
         }
        
         setTransactionState(action, 'error');
@@ -309,10 +308,13 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (e instanceof BaseError && e.walk((err) => err instanceof UserRejectedRequestError)) {
-             toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval in your wallet." });
-        } else if (!e.message?.includes('User rejected the request') && !e.message?.includes('denied transaction') && !(e instanceof Error && e.message.includes("User rejected the request"))) {
-           toast({ variant: "destructive", title: "Deposit Error", description: e.shortMessage || e.message || "An unknown error occurred during deposit." });
+        if (!(e instanceof Error && e.message.includes("User rejected the request"))) {
+            if (e instanceof BaseError) {
+                const reason = e.shortMessage || e.message;
+                toast({ variant: "destructive", title: "Deposit Error", description: reason });
+            } else {
+                toast({ variant: "destructive", title: "Deposit Error", description: "An unknown error occurred during deposit." });
+            }
         }
         setTransactionState('deposit', 'error');
     } finally {
