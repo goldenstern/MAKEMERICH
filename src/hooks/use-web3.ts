@@ -110,9 +110,17 @@ export function useWeb3Provider(): Web3ContextType {
 
   const disconnectWallet = () => {
     disconnect();
+    // This is the critical fix: forcefully clear wagmi's cache from localStorage.
+    // This prevents it from "remembering" and auto-connecting to previous wallets.
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('wagmi.')) {
+        localStorage.removeItem(key);
+      }
+    });
     setGameData(null);
     toast({ title: "Wallet Disconnected" });
   };
+
 
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
@@ -173,6 +181,7 @@ export function useWeb3Provider(): Web3ContextType {
       getAIData(address);
       refetchTokenBalance();
     } else {
+      // If disconnected, ensure game data is cleared.
       setGameData(null);
     }
   }, [address, isConnected, getAIData, refetchTokenBalance]);
@@ -299,10 +308,8 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (e.message.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
-        } else if (e.message && !e.message.includes('An unknown error occurred')) {
-            // Do nothing, error is handled by handleTransaction's catch block for the second part
+        if (!e.message.includes('An unknown error occurred')) {
+            // Error is already handled by handleTransaction's catch block or the user rejection toast
         } else {
             toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
         }
