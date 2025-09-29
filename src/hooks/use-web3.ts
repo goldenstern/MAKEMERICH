@@ -351,25 +351,6 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const makeMeRich = async () => {
-    const freshGameData = await refreshData();
-    if (!freshGameData) {
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch latest game data."});
-        return;
-    }
-    
-    if (freshGameData.playerBalance <= 0) {
-        toast({ variant: "destructive", title: "No balance", description: "No balance to play with." });
-        return;
-    }
-
-    if (freshGameData.playerBalance < freshGameData.minBet) {
-        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${freshGameData?.minBet} to play.`});
-        return;
-    }
-    if (freshGameData.nextAvailableTime && (freshGameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
-        toast({ variant: "destructive", title: "Cooldown", description: `Please wait for the cooldown to finish.`});
-        return;
-    }
     try {
       await handleTransaction('makeMeRich', 'makeMeRich', [], { showSuccessToast: false });
     } catch (error) {
