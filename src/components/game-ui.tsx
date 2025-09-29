@@ -221,7 +221,7 @@ const RefreshTimer = () => {
         <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
              <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
              <span>
-                {isDataFetching ? '' : `${countdown}s`}
+                {isDataFetching ? '...' : `${countdown}s`}
              </span>
         </button>
     );
@@ -236,59 +236,74 @@ const Header = () => {
     setIsClient(true);
   }, []);
 
-  const handleShare = async () => {
-    const shareData = {
-      title: document.title,
-      text: "The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.",
-      url: "https://mmr.angl.money/",
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.error("Share failed:", err);
-        window.open(shareData.url, '_blank', 'noopener,noreferrer');
-      }
-    } else {
-      window.open(shareData.url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
-
   return (
-    <header className="flex items-center justify-between p-4 border-b">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-            <span className="text-primary text-3xl font-bold">⨻</span>
-            <h1 className="text-xl font-bold font-headline">MakeMeRich, AI</h1>
-        </div>
-        <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Link className="h-4 w-4" />
-            Visit AnglVerse Website
-        </a>
-      </div>
-      {isClient && isConnected ? (
-        <div className="flex items-center gap-4">
-          <RefreshTimer />
-          <div className="text-sm text-muted-foreground hidden sm:block">
-            {formattedAddress}
+    <header className="p-4 border-b">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+              <span className="text-primary text-3xl font-bold">⨻</span>
+              <h1 className="text-lg sm:text-xl font-bold font-headline">MakeMeRich, AI</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={disconnectWallet}>
-            <LogOut className="mr-2 h-4 w-4" /> Disconnect
-          </Button>
-        </div>
-      ) : isClient ? (
-        <Button onClick={connectWallet} disabled={isLoading}>
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          
+          {isClient && isConnected ? (
+            <div className="flex sm:hidden items-center gap-2">
+              <div className="text-sm text-muted-foreground">
+                {formattedAddress}
+              </div>
+              <Button variant="outline" size="icon" onClick={disconnectWallet}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : isClient ? (
+             <div className="sm:hidden">
+                <Button onClick={connectWallet} disabled={isLoading} size="sm">
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wallet className="mr-2 h-4 w-4" />
+                  )}
+                  Connect
+                </Button>
+             </div>
           ) : (
-            <Wallet className="mr-2 h-4 w-4" />
+             <Skeleton className="h-9 w-24 sm:hidden" />
           )}
-          Connect Wallet
-        </Button>
-      ) : (
-         <Skeleton className="h-10 w-40" />
-      )}
+        </div>
+
+        <div className="flex items-center sm:gap-4 justify-between sm:justify-start">
+          <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link className="h-4 w-4" />
+              AnglVerse Ecosystem
+          </a>
+
+          <div className="flex items-center gap-4">
+            {isClient && isConnected ? (
+              <>
+                <RefreshTimer />
+                <div className="hidden sm:block text-sm text-muted-foreground">
+                  {formattedAddress}
+                </div>
+                <Button variant="outline" size="icon" onClick={disconnectWallet} className="hidden sm:inline-flex">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </>
+            ) : isClient ? (
+              <div className="hidden sm:block">
+                <Button onClick={connectWallet} disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wallet className="mr-2 h-4 w-4" />
+                  )}
+                  Connect Wallet
+                </Button>
+              </div>
+            ) : (
+              <Skeleton className="h-10 w-40 hidden sm:block" />
+            )}
+          </div>
+        </div>
+      </div>
     </header>
   );
 };
@@ -318,7 +333,7 @@ const ConnectWalletView = () => {
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The game where you can multiply your tokens or lose them all. High risk, high reward!</p>
+      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm to double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The dApp where you can multiply your tokens or lose them all. High risk, high reward!</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet
@@ -565,7 +580,7 @@ const Dashboard = () => {
             ) : (
                 <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
             )}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 max-w-lg mx-auto">
+            <div className="flex flex-col sm:flex-row justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
                   size="lg" 
                   className="w-full h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 

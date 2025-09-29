@@ -236,12 +236,17 @@ export function useWeb3Provider(): Web3ContextType {
       await refreshData();
 
     } catch (e: any) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Transaction Error", description: e.shortMessage || e.message });
-      setTransactionState(action, 'error');
-      // Reset state after a short delay to allow user to see the error state
-      setTimeout(() => setTransactionState(action, 'idle'), 2000);
-      throw e; // re-throw to be caught by caller
+        console.error(e);
+        const errorMessage = e.shortMessage || e.message;
+        if (errorMessage.includes('User rejected the request')) {
+            toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
+        } else {
+            toast({ variant: "destructive", title: "Transaction Error", description: errorMessage });
+        }
+        setTransactionState(action, 'error');
+        // Reset state after a short delay to allow user to see the error state
+        setTimeout(() => setTransactionState(action, 'idle'), 2000);
+        throw e; // re-throw to be caught by caller
     }
   };
 
@@ -285,11 +290,15 @@ export function useWeb3Provider(): Web3ContextType {
 
     } catch (e: any) {
         console.error(e);
-        toast({ variant: "destructive", title: "Stake Error", description: e.shortMessage || e.message });
+        const errorMessage = e.shortMessage || e.message;
+        if (!errorMessage.includes('User rejected the request')) {
+            toast({ variant: "destructive", title: "Stake Error", description: errorMessage });
+        } else {
+             toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
+        }
         setTransactionState('deposit', 'error');
     } finally {
         setLoadingState('deposit', false);
-        // Reset state after a short delay to allow user to see the error state
         setTimeout(() => setTransactionState('deposit', 'idle'), 2000);
     }
   };
@@ -304,7 +313,7 @@ export function useWeb3Provider(): Web3ContextType {
       const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
       await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
     } catch (error) {
-       // Error is already handled in handleTransaction
+       // Error is already handled/toasted in handleTransaction
     } finally {
         setLoadingState('withdraw', false);
     }
@@ -319,7 +328,7 @@ export function useWeb3Provider(): Web3ContextType {
     try {
       await handleTransaction('withdrawAll', 'withdrawAll', []);
     } catch (error) {
-       // Error is already handled in handleTransaction
+       // Error is already handled/toasted in handleTransaction
     } finally {
       setLoadingState('withdrawAll', false);
     }
@@ -344,7 +353,7 @@ export function useWeb3Provider(): Web3ContextType {
     try {
       await handleTransaction('makeMeRich', 'makeMeRich', []);
     } catch (error) {
-      // Error is already handled in handleTransaction
+      // Error is already handled/toasted in handleTransaction
     }
   };
 
