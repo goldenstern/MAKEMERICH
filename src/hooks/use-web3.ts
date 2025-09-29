@@ -71,16 +71,21 @@ const tokenAddress = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS as `0x${string}`) ||
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, isConnected: wagmiIsConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
+  const [localIsConnected, setLocalIsConnected] = useState(false);
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
   const hasShownConnectToast = useRef(false);
+
+  useEffect(() => {
+    setLocalIsConnected(wagmiIsConnected);
+  }, [wagmiIsConnected]);
 
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
@@ -106,7 +111,7 @@ export function useWeb3Provider(): Web3ContextType {
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
   const connectWallet = () => {
-    if (!isConnected) {
+    if (!localIsConnected) {
       connect({ connector: metaMask() });
     }
   };
@@ -114,6 +119,7 @@ export function useWeb3Provider(): Web3ContextType {
   const disconnectWallet = () => {
     disconnect();
     setGameData(null); 
+    setLocalIsConnected(false);
     hasShownConnectToast.current = false;
     toast({ title: "Wallet Disconnected" });
   };
@@ -123,7 +129,7 @@ export function useWeb3Provider(): Web3ContextType {
     address,
     token: tokenAddress,
     query: {
-        enabled: isConnected && !!address,
+        enabled: localIsConnected && !!address,
         refetchInterval: 30000,
     }
   });
@@ -133,7 +139,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!addressToUse) return null;
+    if (!localIsConnected || !addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -170,11 +176,11 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig]);
+  }, [address, wagmiConfig, localIsConnected]);
 
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (localIsConnected && address) {
       if (!hasShownConnectToast.current) {
           toast({ title: "Wallet Connected" });
           hasShownConnectToast.current = true;
@@ -185,7 +191,7 @@ export function useWeb3Provider(): Web3ContextType {
       setGameData(null);
       hasShownConnectToast.current = false;
     }
-  }, [address, isConnected, getAIData, refetchTokenBalance]);
+  }, [address, localIsConnected, getAIData, refetchTokenBalance]);
 
 
   const clearTransactionStatus = () => {
@@ -203,7 +209,7 @@ export function useWeb3Provider(): Web3ContextType {
   const handleTransaction = async (action: string, functionName: string, args: any[] = [], options: { customToastTitle?: string; showSuccessToast?: boolean } = {}) => {
     const { customToastTitle, showSuccessToast = true } = options;
 
-    if (!isConnected || !address) {
+    if (!localIsConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
     }
@@ -373,10 +379,10 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (isConnected && isTokenBalanceLoading && !gameData);
+  const isLoading = isConnecting || (localIsConnected && isTokenBalanceLoading && !gameData);
 
   return {
-    isConnected,
+    isConnected: localIsConnected,
     address,
     formattedAddress,
     tokenBalance,
