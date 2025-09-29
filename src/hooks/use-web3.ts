@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useAccountEffect, useConfig } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
@@ -166,29 +166,23 @@ export function useWeb3Provider(): Web3ContextType {
   }, [isConnected, address, wagmiConfig]);
 
 
-    useAccountEffect({
-        onConnect: (data) => {
-            toast({
-                title: "Wallet Connected",
-                description: `Welcome, ${data.address.slice(0,6)}...${data.address.slice(-4)}`,
-            });
-            getAIData(data.address);
-            refetchTokenBalance();
-        },
-        onDisconnect: () => {
-            toast({
-                title: "Wallet Disconnected",
-            });
-            setGameData(null);
-        },
-    });
-
     useEffect(() => {
         if (isConnected && address) {
+            toast({
+                title: "Wallet Connected",
+                description: `Welcome, ${address.slice(0,6)}...${address.slice(-4)}`,
+            });
             getAIData(address);
             refetchTokenBalance();
+        } else if (!isConnected) {
+            if (gameData !== null) { // Only toast/reset if there was data before
+                toast({
+                    title: "Wallet Disconnected",
+                });
+                setGameData(null);
+            }
         }
-    }, [address, isConnected, getAIData, refetchTokenBalance]);
+    }, [isConnected, address]);
 
 
   const clearTransactionStatus = () => {
@@ -313,10 +307,12 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (e.message.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
-        } else {
-            toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
+        if (!e.message.includes('An unknown error occurred')) {
+          if (e.message.includes('User rejected the request')) {
+              toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
+          } else {
+              toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
+          }
         }
         setTransactionState('deposit', 'error');
     } finally {
