@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -288,7 +289,7 @@ const formatCountdown = (seconds: number) => {
 
 
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress } = useWeb3();
+  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress, contractAddress } = useWeb3();
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
   const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
@@ -298,14 +299,17 @@ const Dashboard = () => {
   
   const explorerUrl = React.useMemo(() => {
     const chain = config.chains.find(c => c.id === config.state.chainId);
-    if (!chain || !tokenAddress) return '#';
+    if (!chain) return '#';
     const baseUrl = chain.blockExplorers?.default.url;
     if (!baseUrl) {
       // Fallback for custom chains without explorer defined
-      return `https://bscscan.com/token/${tokenAddress}`;
+      return `https://bscscan.com`;
     }
-    return `${baseUrl}/token/${tokenAddress}`;
-  }, [config.state.chainId, config.chains, tokenAddress]);
+    return baseUrl;
+  }, [config.state.chainId, config.chains]);
+
+  const tokenExplorerUrl = tokenAddress ? `${explorerUrl}/token/${tokenAddress}` : `${explorerUrl}`;
+  const poolExplorerUrl = contractAddress ? `${explorerUrl}/address/${contractAddress}` : `${explorerUrl}`;
 
 
   React.useEffect(() => {
@@ -410,8 +414,8 @@ const Dashboard = () => {
         <div className="space-y-4 md:col-span-2 lg:col-span-1">
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-            <StatCard icon={Users} title="Attention Pool" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-            <StatCard icon={ArrowDownRight} title="Current Minimum Stake" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Users} title="Pool Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+            <StatCard icon={ArrowDownRight} title="Minimum Stake" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
             <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
           </div>
            <Card>
@@ -430,9 +434,14 @@ const Dashboard = () => {
                             <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                         </Button>
                     </div>
-                     <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
-                     </Button>
+                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <a href={tokenExplorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool Contract</a>
+                         </Button>
+                     </div>
                 </CardContent>
             </Card>
         </div>
@@ -597,3 +606,5 @@ export default function GameUI() {
     </div>
   );
 }
+
+    
