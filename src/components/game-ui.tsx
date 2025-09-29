@@ -220,7 +220,7 @@ const RefreshTimer = () => {
     return (
         <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
              <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
-             <span>
+             <span className="hidden sm:inline">
                 {isDataFetching ? '' : `${countdown}s`}
              </span>
         </button>
@@ -257,10 +257,10 @@ const Header = () => {
 
   return (
     <header className="flex items-center justify-between p-4 border-b">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <div className="flex items-center gap-2">
             <span className="text-primary text-3xl font-bold">⨻</span>
-            <h1 className="text-xl font-bold font-headline">MakeMeRich, AI</h1>
+            <h1 className="text-lg sm:text-xl font-bold font-headline">MakeMeRich, AI</h1>
         </div>
         <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Link className="h-4 w-4" />
@@ -268,13 +268,14 @@ const Header = () => {
         </a>
       </div>
       {isClient && isConnected ? (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <RefreshTimer />
-          <div className="text-sm text-muted-foreground hidden sm:block">
+          <div className="text-sm text-muted-foreground">
             {formattedAddress}
           </div>
-          <Button variant="outline" size="sm" onClick={disconnectWallet}>
-            <LogOut className="mr-2 h-4 w-4" /> Disconnect
+          <Button variant="outline" size="sm" onClick={disconnectWallet} className="px-2 sm:px-3">
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Disconnect</span>
           </Button>
         </div>
       ) : isClient ? (
@@ -565,7 +566,7 @@ const Dashboard = () => {
             ) : (
                 <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
             )}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 max-w-lg mx-auto">
+            <div className="flex flex-col sm:flex-row justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
                   size="lg" 
                   className="w-full h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
