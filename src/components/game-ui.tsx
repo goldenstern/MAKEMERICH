@@ -221,6 +221,9 @@ const RefreshTimer = () => {
         <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
              <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
              <span className="hidden sm:inline">
+                {isDataFetching ? 'Auto-refreshing...' : `Refreshing in ${countdown}s`}
+             </span>
+             <span className="sm:hidden">
                 {isDataFetching ? '' : `${countdown}s`}
              </span>
         </button>
@@ -236,60 +239,75 @@ const Header = () => {
     setIsClient(true);
   }, []);
 
-  const handleShare = async () => {
-    const shareData = {
-      title: document.title,
-      text: "The apotheosis of randomness in WEB3 vibecode, trust your funds to AI algorithms to double it or loose.",
-      url: "https://mmr.angl.money/",
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.error("Share failed:", err);
-        window.open(shareData.url, '_blank', 'noopener,noreferrer');
-      }
-    } else {
-      window.open(shareData.url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
-
   return (
-    <header className="flex items-center justify-between p-4 border-b">
-      <div className="flex items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2">
-            <span className="text-primary text-3xl font-bold">⨻</span>
-            <h1 className="text-lg sm:text-xl font-bold font-headline">MakeMeRich, AI</h1>
-        </div>
-        <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Link className="h-4 w-4" />
-            Visit AnglVerse Website
-        </a>
-      </div>
-      {isClient && isConnected ? (
-        <div className="flex items-center gap-2 sm:gap-4">
-          <RefreshTimer />
-          <div className="text-sm text-muted-foreground">
-            {formattedAddress}
+    <header className="p-4 border-b">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Top row for mobile, left side for desktop */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+              <span className="text-primary text-3xl font-bold">⨻</span>
+              <h1 className="text-lg sm:text-xl font-bold font-headline">MakeMeRich, AI</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={disconnectWallet} className="px-2 sm:px-3">
-            <LogOut className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Disconnect</span>
-          </Button>
-        </div>
-      ) : isClient ? (
-        <Button onClick={connectWallet} disabled={isLoading}>
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          
+          {isClient && isConnected ? (
+            <div className="flex sm:hidden items-center gap-2">
+              <div className="text-sm text-muted-foreground">
+                {formattedAddress}
+              </div>
+              <Button variant="outline" size="icon" onClick={disconnectWallet} className="w-8 h-8">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : isClient ? (
+             <div className="sm:hidden">
+                <Button onClick={connectWallet} disabled={isLoading} size="sm">
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wallet className="mr-2 h-4 w-4" />
+                  )}
+                  Connect
+                </Button>
+             </div>
           ) : (
-            <Wallet className="mr-2 h-4 w-4" />
+             <Skeleton className="h-9 w-24 sm:hidden" />
           )}
-          Connect Wallet
-        </Button>
-      ) : (
-         <Skeleton className="h-10 w-40" />
-      )}
+        </div>
+
+        {/* Bottom row for mobile, right side for desktop */}
+        <div className="flex items-center justify-between">
+          <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link className="h-4 w-4" />
+              Visit AnglVerse Website
+          </a>
+
+          {isClient && isConnected ? (
+            <div className="flex items-center gap-2 sm:gap-4">
+              <RefreshTimer />
+              <div className="hidden sm:block text-sm text-muted-foreground">
+                {formattedAddress}
+              </div>
+              <Button variant="outline" size="sm" onClick={disconnectWallet} className="hidden sm:inline-flex px-2 sm:px-3">
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Disconnect</span>
+              </Button>
+            </div>
+          ) : isClient ? (
+            <div className="hidden sm:block">
+              <Button onClick={connectWallet} disabled={isLoading}>
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Wallet className="mr-2 h-4 w-4" />
+                )}
+                Connect Wallet
+              </Button>
+            </div>
+          ) : (
+            <Skeleton className="h-10 w-40 hidden sm:block" />
+          )}
+        </div>
+      </div>
     </header>
   );
 };
