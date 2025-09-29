@@ -110,7 +110,8 @@ export function useWeb3Provider(): Web3ContextType {
 
   const disconnectWallet = () => {
     disconnect();
-    window.location.reload();
+    setGameData(null);
+    toast({ title: "Wallet Disconnected" });
   };
 
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
@@ -167,14 +168,14 @@ export function useWeb3Provider(): Web3ContextType {
   }, [address, isConnected, wagmiConfig]);
 
 
-    useEffect(() => {
-        if (isConnected && address) {
-            getAIData(address);
-            refetchTokenBalance();
-        } else {
-            setGameData(null);
-        }
-    }, [address, isConnected, getAIData, refetchTokenBalance]);
+  useEffect(() => {
+    if (isConnected && address) {
+      getAIData(address);
+      refetchTokenBalance();
+    } else {
+      setGameData(null);
+    }
+  }, [address, isConnected, getAIData, refetchTokenBalance]);
 
 
   const clearTransactionStatus = () => {
@@ -300,7 +301,9 @@ export function useWeb3Provider(): Web3ContextType {
     } catch (e: any) {
         if (e.message.includes('User rejected the request')) {
             toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
-        } else if (!e.message.includes('An unknown error occurred')) {
+        } else if (e.message && !e.message.includes('An unknown error occurred')) {
+            // Do nothing, error is handled by handleTransaction's catch block for the second part
+        } else {
             toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
         }
         setTransactionState('deposit', 'error');
