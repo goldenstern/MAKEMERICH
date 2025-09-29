@@ -109,11 +109,8 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const disconnectWallet = () => {
-      disconnect();
-      setGameData(null);
-      toast({
-          title: "Wallet Disconnected",
-      });
+    disconnect();
+    window.location.reload();
   };
 
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
@@ -130,7 +127,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!addressToUse) return null;
+    if (!isConnected || !addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -167,22 +164,17 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig]);
+  }, [address, isConnected, wagmiConfig]);
 
 
     useEffect(() => {
-        if (address) {
-            toast({
-                title: "Wallet Connected",
-                description: `Welcome, ${address.slice(0,6)}...${address.slice(-4)}`,
-            });
+        if (isConnected && address) {
             getAIData(address);
             refetchTokenBalance();
         } else {
-            // This ensures that when the user disconnects, all data is cleared.
             setGameData(null);
         }
-    }, [address, getAIData, refetchTokenBalance]);
+    }, [address, isConnected, getAIData, refetchTokenBalance]);
 
 
   const clearTransactionStatus = () => {
@@ -306,12 +298,10 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (!e.message.includes('An unknown error occurred')) {
-          if (e.message.includes('User rejected the request')) {
-              toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
-          } else {
-              toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
-          }
+        if (e.message.includes('User rejected the request')) {
+            toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
+        } else if (!e.message.includes('An unknown error occurred')) {
+            toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
         }
         setTransactionState('deposit', 'error');
     } finally {
