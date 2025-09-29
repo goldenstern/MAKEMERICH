@@ -148,9 +148,7 @@ const LitepaperDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: 
 
   React.useEffect(() => {
     if (open) {
-      // The file is located in the public folder, so we can fetch it directly.
-      // We will move the file there.
-      fetch('/Litepaper.md')
+      fetch('/LitepaperEN.md')
         .then(response => response.text())
         .then(text => setMarkdown(text));
     }
@@ -162,7 +160,7 @@ const LitepaperDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: 
         <DialogHeader>
           <DialogTitle>MakeMeRich, AI: Litepaper</DialogTitle>
           <DialogDescription>
-            Утопический Денежный ИИ на основе Мудрости Толпы
+            Crowd Wisdom Utopian Money AI
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[70vh] w-full pr-6">
