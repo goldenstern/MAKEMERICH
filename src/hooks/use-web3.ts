@@ -313,9 +313,11 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        // Error is already handled by handleTransaction or the catch block inside it.
-        // We only need to ensure UI state is reset.
-        console.error("Deposit failed:", e.message);
+        if (e.message.includes('User rejected the request')) {
+            toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval transaction." });
+        } else {
+            toast({ variant: "destructive", title: "Approval Error", description: "An error occurred during approval." });
+        }
         setTransactionState('deposit', 'error');
     } finally {
         setLoadingState('deposit', false);
