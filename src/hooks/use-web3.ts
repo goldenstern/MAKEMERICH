@@ -341,6 +341,11 @@ export function useWeb3Provider(): Web3ContextType {
         toast({ variant: "destructive", title: "Error", description: "Could not fetch latest game data."});
         return;
     }
+    
+    if (freshGameData.playerBalance <= 0) {
+        toast({ variant: "destructive", title: "No balance", description: "No balance to play with." });
+        return;
+    }
 
     if (freshGameData.playerBalance < freshGameData.minBet) {
         toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${freshGameData?.minBet} to play.`});
