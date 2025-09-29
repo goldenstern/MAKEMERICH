@@ -270,37 +270,39 @@ const Header = () => {
           )}
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center sm:gap-4 justify-between sm:justify-end">
           <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <Link className="h-4 w-4" />
-              Visit AnglVerse Website
+              AnglVerse Website
           </a>
 
-          {isClient && isConnected ? (
-            <div className="flex items-center gap-2 sm:gap-4">
-              <RefreshTimer />
-              <div className="hidden sm:block text-sm text-muted-foreground">
-                {formattedAddress}
+          <div className="flex items-center gap-4">
+            {isClient && isConnected ? (
+              <>
+                <RefreshTimer />
+                <div className="hidden sm:block text-sm text-muted-foreground">
+                  {formattedAddress}
+                </div>
+                <Button variant="outline" size="sm" onClick={disconnectWallet} className="hidden sm:inline-flex px-2 sm:px-3">
+                  <LogOut className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Disconnect</span>
+                </Button>
+              </>
+            ) : isClient ? (
+              <div className="hidden sm:block">
+                <Button onClick={connectWallet} disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wallet className="mr-2 h-4 w-4" />
+                  )}
+                  Connect Wallet
+                </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={disconnectWallet} className="hidden sm:inline-flex px-2 sm:px-3">
-                <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Disconnect</span>
-              </Button>
-            </div>
-          ) : isClient ? (
-            <div className="hidden sm:block">
-              <Button onClick={connectWallet} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Wallet className="mr-2 h-4 w-4" />
-                )}
-                Connect Wallet
-              </Button>
-            </div>
-          ) : (
-            <Skeleton className="h-10 w-40 hidden sm:block" />
-          )}
+            ) : (
+              <Skeleton className="h-10 w-40 hidden sm:block" />
+            )}
+          </div>
         </div>
       </div>
     </header>
