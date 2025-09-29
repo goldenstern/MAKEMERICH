@@ -382,7 +382,7 @@ const Dashboard = () => {
       }
     }
     if (cooldown > 0) {
-      return `Next block in ${formatCountdown(cooldown)}`;
+      return `Next MMR AI block in ${formatCountdown(cooldown)}`;
     }
     return "MakeMeRich, AI";
   };
@@ -407,6 +407,7 @@ const Dashboard = () => {
     }
   };
 
+  const isBalanceInsufficient = (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0);
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
@@ -502,13 +503,19 @@ const Dashboard = () => {
       </div>
 
        <div className="text-center pt-8">
-            <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
+            {isBalanceInsufficient && !isLoading && cooldown === 0 ? (
+                <h3 className="text-2xl font-bold font-headline mb-4 text-destructive">
+                    You need at least {gameData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
+                </h3>
+            ) : (
+                <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
+            )}
             <div className="flex justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
                   size="lg" 
                   className="flex-1 h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
                   onClick={handleMakeMeRichClick} 
-                  disabled={getTransactionState('makeMeRich').isActive || (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) || cooldown > 0}
+                  disabled={getTransactionState('makeMeRich').isActive || isBalanceInsufficient || cooldown > 0}
               >
                   {getMakeMeRichButtonContent()}
               </Button>
@@ -516,16 +523,13 @@ const Dashboard = () => {
                   <Share2 className="mr-2 h-4 w-4" /> Farm Attention
               </Button>
             </div>
-             {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
-                <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your stake to activate MMR AI.</p>
-             }
         </div>
         <AlertDialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward game.
+                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward opportunity.
               </AlertDialogDescription>
             </AlertDialogHeader>
              <div className="flex items-center space-x-2">
@@ -606,5 +610,3 @@ export default function GameUI() {
     </div>
   );
 }
-
-    
