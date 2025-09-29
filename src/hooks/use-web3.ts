@@ -124,14 +124,14 @@ export function useWeb3Provider(): Web3ContextType {
   const tokenDecimals = 8;
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
-  const getGameData = useCallback(async () => {
+  const getAIData = useCallback(async () => {
     if (!isConnected || !address) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
             abi: gameABI,
             address: contractAddress,
-            functionName: 'getGameData',
+            functionName: 'getAIData',
             args: [],
             account: address,
         });
@@ -171,7 +171,7 @@ export function useWeb3Provider(): Web3ContextType {
                 title: "Wallet Connected",
                 description: `Welcome, ${data.address}`,
             });
-            getGameData();
+            getAIData();
             refetchTokenBalance();
         },
         onDisconnect: () => {
@@ -184,14 +184,14 @@ export function useWeb3Provider(): Web3ContextType {
 
     useEffect(() => {
         if(isConnected && address) {
-            getGameData();
+            getAIData();
             const interval = setInterval(() => {
-                getGameData();
+                getAIData();
                 refetchTokenBalance();
             }, 30000);
             return () => clearInterval(interval);
         }
-    }, [isConnected, address, getGameData, refetchTokenBalance]);
+    }, [isConnected, address, getAIData, refetchTokenBalance]);
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
@@ -200,10 +200,10 @@ export function useWeb3Provider(): Web3ContextType {
 
   const refreshData = useCallback(async (): Promise<GameData | null> => {
     if(isDataFetching) return gameData;
-    const freshGameData = await getGameData();
+    const freshGameData = await getAIData();
     await refetchTokenBalance();
     return freshGameData;
-  }, [getGameData, refetchTokenBalance, isDataFetching, gameData]);
+  }, [getAIData, refetchTokenBalance, isDataFetching, gameData]);
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
