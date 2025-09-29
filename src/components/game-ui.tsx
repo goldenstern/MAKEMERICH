@@ -250,7 +250,7 @@ const Header = () => {
               <div className="text-sm text-muted-foreground">
                 {formattedAddress}
               </div>
-              <Button variant="outline" size="icon" onClick={disconnectWallet} className="w-8 h-8">
+              <Button variant="outline" size="icon" onClick={disconnectWallet}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -270,7 +270,7 @@ const Header = () => {
           )}
         </div>
 
-        <div className="flex items-center sm:gap-4 justify-between sm:justify-end">
+        <div className="flex items-center sm:gap-4 justify-between sm:justify-start">
           <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <Link className="h-4 w-4" />
               AnglVerse Website
@@ -283,9 +283,8 @@ const Header = () => {
                 <div className="hidden sm:block text-sm text-muted-foreground">
                   {formattedAddress}
                 </div>
-                <Button variant="outline" size="sm" onClick={disconnectWallet} className="hidden sm:inline-flex px-2 sm:px-3">
-                  <LogOut className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Disconnect</span>
+                <Button variant="outline" size="icon" onClick={disconnectWallet} className="hidden sm:inline-flex">
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </>
             ) : isClient ? (
