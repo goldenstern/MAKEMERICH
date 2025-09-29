@@ -36,6 +36,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -619,6 +620,7 @@ const Dashboard = () => {
 
 export default function GameUI() {
   const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, gameData } = useWeb3();
+  const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
   const [showTears, setShowTears] = React.useState(false);
@@ -646,8 +648,13 @@ export default function GameUI() {
       if (previousBalance !== undefined) {
           if (currentBalance > previousBalance) {
             setShowConfetti(true);
+            toast({ title: "You Won!", description: "Your stake has been doubled." });
           } else if (currentBalance < previousBalance) {
             setShowTears(true);
+            toast({ variant: "destructive", title: "You Lost...", description: "Your stake is gone. Better luck next time!" });
+          } else {
+            // This case might happen if the transaction somehow resulted in no change
+            toast({ title: "Transaction Confirmed", description: "Your balance is unchanged." });
           }
       }
       
@@ -660,7 +667,7 @@ export default function GameUI() {
     if (gameData && !isDataFetching) {
       prevPlayerBalance.current = gameData.playerBalance;
     }
-  }, [gameData, isDataFetching, clearTransactionStatus]);
+  }, [gameData, isDataFetching, clearTransactionStatus, toast]);
 
 
   return (
@@ -681,4 +688,3 @@ export default function GameUI() {
     </div>
   );
 }
-

@@ -204,7 +204,9 @@ export function useWeb3Provider(): Web3ContextType {
   }, [getAIData, refetchTokenBalance, isDataFetching, gameData]);
 
 
-  const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
+  const handleTransaction = async (action: string, functionName: string, args: any[] = [], options: { customToastTitle?: string; showSuccessToast?: boolean } = {}) => {
+    const { customToastTitle, showSuccessToast = true } = options;
+
     if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
@@ -227,7 +229,9 @@ export function useWeb3Provider(): Web3ContextType {
           throw new Error("Transaction failed.");
       }
 
-      toast({ title: "Success", description: "Transaction confirmed." });
+      if (showSuccessToast) {
+        toast({ title: "Success", description: "Transaction confirmed." });
+      }
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
       await refreshData();
@@ -305,7 +309,7 @@ export function useWeb3Provider(): Web3ContextType {
 
         toast({ title: "Approved!", description: "Staking tokens..." });
 
-        await handleTransaction('deposit', 'deposit', [amountInUnits], "Staking...");
+        await handleTransaction('deposit', 'deposit', [amountInUnits], { customToastTitle: "Staking..." });
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
@@ -371,7 +375,7 @@ export function useWeb3Provider(): Web3ContextType {
         return;
     }
     try {
-      await handleTransaction('makeMeRich', 'makeMeRich', []);
+      await handleTransaction('makeMeRich', 'makeMeRich', [], { showSuccessToast: false });
     } catch (error) {
       // Error is already handled/toasted in handleTransaction
     }
