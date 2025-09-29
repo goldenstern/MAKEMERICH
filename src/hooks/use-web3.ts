@@ -188,7 +188,7 @@ export function useWeb3Provider(): Web3ContextType {
             getAIData(address);
             refetchTokenBalance();
         }
-    }, [address, isConnected]); // Reruns when address changes
+    }, [address, isConnected, getAIData, refetchTokenBalance]);
 
 
   const clearTransactionStatus = () => {
@@ -233,26 +233,40 @@ export function useWeb3Provider(): Web3ContextType {
       await refreshData();
 
     } catch (e: any) {
-        console.error(e);
-        const errorMessage = e.shortMessage || e.message || 'An unknown error occurred.';
-        let description = 'An unknown error occurred.';
+        let error: any = e;
+        let reason = "An unknown error occurred.";
 
-        if (errorMessage.includes('User rejected the request')) {
-            description = "You rejected the transaction in your wallet.";
-            toast({ variant: "destructive", title: "Transaction Rejected", description });
-        } else if (errorMessage.includes('reason:')) {
-            const reason = errorMessage.substring(errorMessage.indexOf('reason:') + 8).replace(/"/g, '').trim();
-            description = reason.charAt(0).toUpperCase() + reason.slice(1);
-            toast({ variant: "destructive", title: "Transaction Error", description });
+        // Find the revert reason
+        let foundReason = false;
+        while (error && !foundReason) {
+            if (error.reason) {
+                reason = error.reason;
+                foundReason = true;
+            } else if (error.cause) {
+                error = error.cause;
+            } else if (error.data && error.data.message) {
+                 reason = error.data.message;
+                 foundReason = true;
+            } else if (error.shortMessage) {
+                reason = error.shortMessage;
+                foundReason = true;
+            } else {
+                error = null;
+            }
+        }
+        
+        // Specific check for user rejection
+        if (reason.includes('User rejected the request') || reason.includes('denied transaction')) {
+            toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
         } else {
-             description = errorMessage;
-             toast({ variant: "destructive", title: "Transaction Error", description });
+            const finalReason = reason.replace('execution reverted: ', '');
+            toast({ variant: "destructive", title: "Transaction Error", description: finalReason.charAt(0).toUpperCase() + finalReason.slice(1) });
         }
        
         setTransactionState(action, 'error');
         // Reset state after a short delay to allow user to see the error state
         setTimeout(() => setTransactionState(action, 'idle'), 2000);
-        throw new Error(description); // re-throw to be caught by caller
+        throw new Error(reason); // re-throw to be caught by caller
     }
   };
 
@@ -389,4 +403,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
