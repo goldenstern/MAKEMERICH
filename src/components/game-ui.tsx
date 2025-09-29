@@ -220,11 +220,8 @@ const RefreshTimer = () => {
     return (
         <button onClick={handleRefresh} disabled={isDataFetching} className="flex items-center gap-2 text-sm text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed">
              <RefreshCw className={`h-4 w-4 ${isDataFetching ? 'animate-spin' : ''}`} />
-             <span className="hidden sm:inline">
-                {isDataFetching ? 'Auto-refreshing...' : `Refreshing in ${countdown}s`}
-             </span>
-             <span className="sm:hidden">
-                {isDataFetching ? '' : `${countdown}s`}
+             <span>
+                {isDataFetching ? '...' : `${countdown}s`}
              </span>
         </button>
     );
@@ -242,7 +239,6 @@ const Header = () => {
   return (
     <header className="p-4 border-b">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Top row for mobile, left side for desktop */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
               <span className="text-primary text-3xl font-bold">⨻</span>
@@ -274,7 +270,6 @@ const Header = () => {
           )}
         </div>
 
-        {/* Bottom row for mobile, right side for desktop */}
         <div className="flex items-center justify-between">
           <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <Link className="h-4 w-4" />
