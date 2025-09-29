@@ -209,7 +209,7 @@ const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
             <span className="text-primary text-3xl font-bold">⨻</span>
-            <h1 className="text-xl font-bold font-headline">MakeMeRich, GoldenStern!</h1>
+            <h1 className="text-xl font-bold font-headline">MakeMeRich, AI</h1>
         </div>
         <a href="https://angl.money" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Link className="h-4 w-4" />
@@ -384,7 +384,7 @@ const Dashboard = () => {
     if (cooldown > 0) {
       return `Next block in ${formatCountdown(cooldown)}`;
     }
-    return "MakeMeRich, GoldenStern!";
+    return "MakeMeRich, AI";
   };
 
   const handleShare = async () => {
@@ -513,11 +513,11 @@ const Dashboard = () => {
                   {getMakeMeRichButtonContent()}
               </Button>
               <Button variant="outline" size="lg" className="h-16" onClick={handleShare}>
-                  <Share2 className="mr-2 h-4 w-4" /> Mine Attention
+                  <Share2 className="mr-2 h-4 w-4" /> Farm Attention
               </Button>
             </div>
              {((gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0) && !isLoading && cooldown === 0) &&
-                <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your stake to activate MMR.</p>
+                <p className="text-destructive mt-2 text-sm">You need at least {gameData?.minBet} tokens in your stake to activate MMR AI.</p>
              }
         </div>
         <AlertDialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>

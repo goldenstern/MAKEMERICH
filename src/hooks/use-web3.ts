@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
@@ -187,7 +188,7 @@ export function useWeb3Provider(): Web3ContextType {
 
 
   const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
-    if (!isConnected) {
+    if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
     }
@@ -198,6 +199,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: contractAddress,
             functionName,
             args,
+            account: address,
         });
       setTransactionState(action, 'processing');
       toast({ title: customToastTitle || "Transaction Sent", description: "Waiting for confirmation..." });
@@ -225,6 +227,8 @@ export function useWeb3Provider(): Web3ContextType {
 
   const deposit = async (amount: number) => {
     if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
+    if (!address) return toast({ variant: "destructive", title: "Wallet not connected" });
+    
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
     setLoadingState('deposit', true);
@@ -240,6 +244,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: tokenAddress,
             functionName: 'approve',
             args: [contractAddress, amountInUnits],
+            account: address,
         });
         
         setTransactionState('deposit', 'processing');
