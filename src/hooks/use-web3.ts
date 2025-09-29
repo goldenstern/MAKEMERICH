@@ -5,9 +5,10 @@ import { useState, useEffect, useCallback, createContext, useContext, useRef } f
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
-import { parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { gameABI } from '@/lib/abi';
+import { ContractFunctionRevertedError, UserRejectedRequestError } from 'viem';
 
 export interface GameData {
   playerBalance: number;
@@ -191,7 +192,7 @@ export function useWeb3Provider(): Web3ContextType {
       setGameData(null);
       hasShownConnectToast.current = false;
     }
-  }, [address, localIsConnected, getAIData, refetchTokenBalance]);
+  }, [address, localIsConnected, getAIData, refetchTokenBalance, toast]);
 
 
   const clearTransactionStatus = () => {
@@ -239,30 +240,24 @@ export function useWeb3Provider(): Web3ContextType {
       await refreshData();
 
     } catch (e: any) {
-        let error: any = e;
         let reason = "An unknown error occurred.";
-
-        // Find the revert reason
-        let foundReason = false;
-        while (error && !foundReason) {
-            if (error.reason) {
-                reason = error.reason;
-                foundReason = true;
-            } else if (error.cause) {
-                error = error.cause;
-            } else if (error.data && error.data.message) {
-                 reason = error.data.message;
-                 foundReason = true;
-            } else if (error.shortMessage) {
-                reason = error.shortMessage;
-                foundReason = true;
-            } else {
-                error = null;
-            }
+        if (e instanceof BaseError) {
+          const revertError = e.walk(
+            (err) => err instanceof ContractFunctionRevertedError
+          );
+          if (revertError instanceof ContractFunctionRevertedError) {
+            reason = revertError.reason ?? reason;
+          } else {
+             const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
+              if (userRejectedError instanceof UserRejectedRequestError) {
+                  reason = "User rejected the request";
+              } else {
+                  reason = e.shortMessage;
+              }
+          }
         }
         
-        // Specific check for user rejection
-        if (reason.includes('User rejected the request') || reason.includes('denied transaction')) {
+        if (reason.includes('User rejected the request')) {
             toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
         } else {
             const finalReason = reason.replace('execution reverted: ', '');
@@ -314,8 +309,10 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (!e.message?.includes('User rejected the request') && !e.message?.includes('denied transaction')) {
-           toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
+        if (e instanceof BaseError && e.walk((err) => err instanceof UserRejectedRequestError)) {
+             toast({ variant: "destructive", title: "Approval Rejected", description: "You rejected the approval in your wallet." });
+        } else if (!e.message?.includes('User rejected the request') && !e.message?.includes('denied transaction') && !(e instanceof Error && e.message.includes("User rejected the request"))) {
+           toast({ variant: "destructive", title: "Deposit Error", description: e.shortMessage || e.message || "An unknown error occurred during deposit." });
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -405,5 +402,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
-    
