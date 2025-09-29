@@ -179,11 +179,13 @@ export function useWeb3Provider(): Web3ContextType {
       reset();
   };
 
-  const refreshData = useCallback(() => {
+  const refreshData = useCallback(async () => {
     if(isGameDataFetching || isTokenBalanceFetching) return;
-    refetchGameData();
-    refetchTokenBalance();
-    refetchFeePercent();
+    await Promise.all([
+        refetchGameData(),
+        refetchTokenBalance(),
+        refetchFeePercent()
+    ]);
   }, [refetchGameData, refetchTokenBalance, refetchFeePercent, isGameDataFetching, isTokenBalanceFetching]);
 
 
@@ -213,7 +215,7 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ title: "Success", description: "Transaction confirmed." });
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
-      refreshData();
+      await refreshData();
 
     } catch (e: any) {
       console.error(e);
@@ -306,11 +308,15 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const makeMeRich = async () => {
-    if (!gameData || gameData.playerBalance < gameData.minBet) {
-        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData?.minBet} to play.`});
+    await refreshData();
+    // After refresh, get the latest gameData
+    const freshGameData = gameData;
+
+    if (!freshGameData || freshGameData.playerBalance < freshGameData.minBet) {
+        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${freshGameData?.minBet} to play.`});
         return;
     }
-    if (gameData.nextAvailableTime && (gameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
+    if (freshGameData.nextAvailableTime && (freshGameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
         toast({ variant: "destructive", title: "Cooldown", description: `Please wait for the cooldown to finish.`});
         return;
     }
