@@ -74,7 +74,7 @@ export function useWeb3Provider(): Web3ContextType {
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { writeContractAsync, data: hash, reset } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
@@ -110,9 +110,13 @@ export function useWeb3Provider(): Web3ContextType {
 
   const disconnectWallet = () => {
       disconnect();
+      setGameData(null);
+      toast({
+          title: "Wallet Disconnected",
+      });
   };
 
-  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading, isFetching: isTokenBalanceFetching } = useBalance({
+  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
     token: tokenAddress,
     query: {
@@ -126,7 +130,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!isConnected || !addressToUse) return null;
+    if (!addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -163,7 +167,7 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [isConnected, address, wagmiConfig]);
+  }, [address, wagmiConfig]);
 
 
     useEffect(() => {
@@ -174,20 +178,12 @@ export function useWeb3Provider(): Web3ContextType {
             });
             getAIData(address);
             refetchTokenBalance();
-        } else if (!isConnected) {
-            if (gameData !== null) { // Only toast/reset if there was data before
-                toast({
-                    title: "Wallet Disconnected",
-                });
-                setGameData(null);
-            }
         }
     }, [isConnected, address]);
 
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
-      reset();
   };
 
   const refreshData = useCallback(async (): Promise<GameData | null> => {
