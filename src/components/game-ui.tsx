@@ -200,7 +200,7 @@ const RefreshTimer = () => {
             timer = setInterval(() => {
                 setCountdown(prev => {
                     if (prev <= 1) {
-                        refreshData();
+                        setTimeout(() => refreshData(), 0);
                         return REFRESH_INTERVAL;
                     }
                     return prev - 1;
@@ -333,7 +333,7 @@ const ConnectWalletView = () => {
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich, AI</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm so double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The dApp where you can multiply your tokens or lose them all. High risk, high reward!</p>
+      <p className="text-muted-foreground mb-6 max-w-md">Connect your Web3 wallet to start playing. The dApp where you can multiply your tokens or lose them all. High risk, high reward!</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet
@@ -681,3 +681,4 @@ export default function GameUI() {
     </div>
   );
 }
+
