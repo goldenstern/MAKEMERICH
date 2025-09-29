@@ -5,6 +5,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import ReactMarkdown from 'react-markdown';
 import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2 } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "./ui/separator";
 import { useConfig } from "wagmi";
-import { mainnet } from "wagmi/chains";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -133,6 +141,50 @@ const Tears = ({ onComplete }: { onComplete: () => void }) => {
   }, [onComplete]);
 
   return <>{drops}</>;
+};
+
+const LitepaperDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) => {
+  const [markdown, setMarkdown] = React.useState('');
+
+  React.useEffect(() => {
+    if (open) {
+      // The file is located in the public folder, so we can fetch it directly.
+      // We will move the file there.
+      fetch('/Litepaper.md')
+        .then(response => response.text())
+        .then(text => setMarkdown(text));
+    }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>MakeMeRich, AI: Litepaper</DialogTitle>
+          <DialogDescription>
+            Утопический Денежный ИИ на основе Мудрости Толпы
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="h-[70vh] w-full pr-6">
+          <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                h1: ({node, ...props}) => <h1 className="text-2xl font-bold font-headline mt-6 mb-2" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-xl font-bold font-headline mt-4 mb-2 border-b pb-1" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-lg font-semibold font-headline mt-4" {...props} />,
+                p: ({node, ...props}) => <p className="leading-relaxed my-2" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
+                em: ({node, ...props}) => <em className="italic" {...props} />,
+                code: ({node, ...props}) => <code className="bg-muted text-muted-foreground rounded px-1 py-0.5 text-sm" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-2" {...props} />,
+                hr: ({node, ...props}) => <hr className="my-4 border-border" {...props} />,
+              }}
+            >{markdown}</ReactMarkdown>
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 
@@ -293,6 +345,7 @@ const Dashboard = () => {
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
   const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
+  const [isLitepaperOpen, setIsLitepaperOpen] = React.useState(false);
   const [dontRemindAgain, setDontRemindAgain] = React.useState(false);
 
   const amountForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
@@ -442,6 +495,9 @@ const Dashboard = () => {
                          <Button variant="outline" size="sm" className="w-full" asChild>
                             <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool Contract</a>
                          </Button>
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
+                            Litepaper
+                         </Button>
                      </div>
                 </CardContent>
             </Card>
@@ -542,6 +598,7 @@ const Dashboard = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <LitepaperDialog open={isLitepaperOpen} onOpenChange={setIsLitepaperOpen} />
     </main>
   );
 };
