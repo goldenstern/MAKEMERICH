@@ -170,7 +170,7 @@ export function useWeb3Provider(): Web3ContextType {
         onConnect: (data) => {
             toast({
                 title: "Wallet Connected",
-                description: `Welcome, ${data.address}`,
+                description: `Welcome, ${data.address.slice(0,6)}...${data.address.slice(-4)}`,
             });
             getAIData(data.address);
             refetchTokenBalance();
@@ -184,15 +184,12 @@ export function useWeb3Provider(): Web3ContextType {
     });
 
     useEffect(() => {
-        if(isConnected && address) {
-            getAIData();
-            const interval = setInterval(() => {
-                getAIData();
-                refetchTokenBalance();
-            }, 30000);
-            return () => clearInterval(interval);
+        if (isConnected && address) {
+            getAIData(address);
+            refetchTokenBalance();
         }
-    }, [isConnected, address, getAIData, refetchTokenBalance]);
+    }, [address, isConnected]); // Reruns when address changes
+
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
@@ -237,19 +234,25 @@ export function useWeb3Provider(): Web3ContextType {
 
     } catch (e: any) {
         console.error(e);
-        const errorMessage = e.shortMessage || e.message;
+        const errorMessage = e.shortMessage || e.message || 'An unknown error occurred.';
+        let description = 'An unknown error occurred.';
+
         if (errorMessage.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
+            description = "You rejected the transaction in your wallet.";
+            toast({ variant: "destructive", title: "Transaction Rejected", description });
         } else if (errorMessage.includes('reason:')) {
-            const reason = errorMessage.substring(errorMessage.indexOf('reason:') + 8).replace(/"/g, '');
-            toast({ variant: "destructive", title: "Transaction Error", description: reason });
+            const reason = errorMessage.substring(errorMessage.indexOf('reason:') + 8).replace(/"/g, '').trim();
+            description = reason.charAt(0).toUpperCase() + reason.slice(1);
+            toast({ variant: "destructive", title: "Transaction Error", description });
         } else {
-            toast({ variant: "destructive", title: "Transaction Error", description: errorMessage });
+             description = errorMessage;
+             toast({ variant: "destructive", title: "Transaction Error", description });
         }
+       
         setTransactionState(action, 'error');
         // Reset state after a short delay to allow user to see the error state
         setTimeout(() => setTransactionState(action, 'idle'), 2000);
-        throw e; // re-throw to be caught by caller
+        throw new Error(description); // re-throw to be caught by caller
     }
   };
 
@@ -292,15 +295,9 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        const errorMessage = e.shortMessage || e.message;
-        if (!errorMessage.includes('User rejected the request')) {
-             if (errorMessage.includes('reason:')) {
-                const reason = errorMessage.substring(errorMessage.indexOf('reason:') + 8).replace(/"/g, '');
-                toast({ variant: "destructive", title: "Stake Error", description: reason });
-            } else {
-                toast({ variant: "destructive", title: "Stake Error", description: errorMessage });
-            }
-        }
+        // Error is already handled by handleTransaction or the catch block inside it.
+        // We only need to ensure UI state is reset.
+        console.error("Deposit failed:", e.message);
         setTransactionState('deposit', 'error');
     } finally {
         setLoadingState('deposit', false);
@@ -341,7 +338,6 @@ export function useWeb3Provider(): Web3ContextType {
 
   const makeMeRich = async () => {
     const freshGameData = await refreshData();
-
     if (!freshGameData) {
         toast({ variant: "destructive", title: "Error", description: "Could not fetch latest game data."});
         return;
@@ -394,4 +390,3 @@ export function useWeb3Provider(): Web3ContextType {
   };
 }
 
-    
