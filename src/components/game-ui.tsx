@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -564,16 +565,16 @@ const Dashboard = () => {
             ) : (
                 <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
             )}
-            <div className="flex justify-center items-stretch gap-2 max-w-lg mx-auto">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 max-w-lg mx-auto">
               <Button 
                   size="lg" 
-                  className="flex-1 h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
+                  className="w-full h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
                   onClick={handleMakeMeRichClick} 
                   disabled={getTransactionState('makeMeRich').isActive || isBalanceInsufficient || cooldown > 0}
               >
                   {getMakeMeRichButtonContent()}
               </Button>
-              <Button variant="outline" size="lg" className="h-16" onClick={handleShare}>
+              <Button variant="outline" size="lg" className="w-full h-16" onClick={handleShare}>
                   <Share2 className="mr-2 h-4 w-4" /> Farm Attention
               </Button>
             </div>
