@@ -130,7 +130,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!isConnected || !addressToUse) return null;
+    if (!addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -167,21 +167,22 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig, isConnected]);
+  }, [address, wagmiConfig]);
 
 
     useEffect(() => {
-        if (isConnected && address) {
+        if (address) {
             toast({
                 title: "Wallet Connected",
                 description: `Welcome, ${address.slice(0,6)}...${address.slice(-4)}`,
             });
             getAIData(address);
             refetchTokenBalance();
-        } else if (!isConnected) {
+        } else {
+            // This ensures that when the user disconnects, all data is cleared.
             setGameData(null);
         }
-    }, [isConnected, address]);
+    }, [address, getAIData, refetchTokenBalance]);
 
 
   const clearTransactionStatus = () => {
