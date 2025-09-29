@@ -130,7 +130,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!addressToUse) return null;
+    if (!isConnected || !addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -167,7 +167,7 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig]);
+  }, [address, wagmiConfig, isConnected]);
 
 
     useEffect(() => {
@@ -178,6 +178,8 @@ export function useWeb3Provider(): Web3ContextType {
             });
             getAIData(address);
             refetchTokenBalance();
+        } else if (!isConnected) {
+            setGameData(null);
         }
     }, [isConnected, address]);
 
@@ -401,3 +403,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+    
