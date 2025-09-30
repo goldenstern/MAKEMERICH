@@ -20,17 +20,7 @@ interface Particle {
 
 export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [colors, setColors] = useState({ primary: '#000', foreground: '#fff' });
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const computedStyle = getComputedStyle(document.documentElement);
-      setColors({
-        primary: `hsl(${computedStyle.getPropertyValue('--primary').trim()})`,
-        foreground: `hsl(${computedStyle.getPropertyValue('--foreground').trim()})`,
-      });
-    }
-  }, []);
+  const [colors, setColors] = useState({ black: '#000000', gold: '#e5c44f' });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,7 +47,6 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     
     const poolRadius = width * 0.3;
     const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-    // Make player radius proportional, but visually distinct
     const playerRadius = poolRadius * (Math.cbrt(stakeRatio) * 0.8 + 0.1);
 
 
@@ -88,6 +77,15 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     
     let animationFrameId: number;
 
+    // Create a path for the triangle
+    const trianglePath = new Path2D();
+    const triangleSize = 4; // The "radius" of the triangle
+    trianglePath.moveTo(0, -triangleSize);
+    trianglePath.lineTo(triangleSize * Math.cos(Math.PI / 6), triangleSize * Math.sin(Math.PI / 6));
+    trianglePath.lineTo(-triangleSize * Math.cos(Math.PI / 6), triangleSize * Math.sin(Math.PI / 6));
+    trianglePath.closePath();
+
+
     function animate() {
       if (!ctx || !canvas) return;
 
@@ -99,15 +97,15 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
       ctx.clearRect(0, 0, width, height);
       
-      const rotateX = (p: Particle) => {
-        const y = p.y * Math.cos(rotation) - p.z * Math.sin(rotation);
-        const z = p.y * Math.sin(rotation) + p.z * Math.cos(rotation);
+      const rotateX = (p: Particle, angle: number) => {
+        const y = p.y * Math.cos(angle) - p.z * Math.sin(angle);
+        const z = p.y * Math.sin(angle) + p.z * Math.cos(angle);
         return { ...p, y, z };
       }
       
-      const rotateY = (p: Particle) => {
-          const x = p.x * Math.cos(rotation) + p.z * Math.sin(rotation);
-          const z = -p.x * Math.sin(rotation) + p.z * Math.cos(rotation);
+      const rotateY = (p: Particle, angle: number) => {
+          const x = p.x * Math.cos(angle) + p.z * Math.sin(angle);
+          const z = -p.x * Math.sin(angle) + p.z * Math.cos(angle);
           return { ...p, x, z };
       }
 
@@ -122,23 +120,26 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         };
       }
       
-      const drawParticles = (particleArray: Particle[], color: string) => {
+      const drawParticles = (particleArray: Particle[], color: string, rotationAngle: number) => {
+        ctx.fillStyle = color;
         particleArray.forEach(p => {
-          let rotated = rotateY(p);
-          rotated = rotateX(rotated);
+          let rotated = rotateY(p, rotationAngle);
+          rotated = rotateX(rotated, rotationAngle * 0.5);
           const proj = project(rotated, width, height);
-
-          ctx.beginPath();
-          ctx.fillStyle = color;
+          
           ctx.globalAlpha = proj.alpha;
-          ctx.arc(proj.x, proj.y, 1 * proj.scale, 0, 2 * Math.PI);
-          ctx.fill();
+          
+          ctx.save();
+          ctx.translate(proj.x, proj.y);
+          ctx.scale(proj.scale, proj.scale);
+          ctx.fill(trianglePath);
+          ctx.restore();
         });
       }
 
-      drawParticles(particles, colors.primary);
+      drawParticles(particles, colors.black, rotation);
       if (playerParticleCount > 0) {
-        drawParticles(playerParticles, colors.foreground);
+        drawParticles(playerParticles, colors.gold, rotation);
       }
 
       rotation += 0.002;
