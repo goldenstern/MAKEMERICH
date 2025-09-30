@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 const title = 'MakeMeRich, AI';
-const description = 'The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm so double it or loose.';
+const description = 'The apotheosis of clarity in WEB3 vibecode, stake your funds into Crowd Wisdom AI algorithm to double it or loose.';
 
 export const metadata: Metadata = {
   title,
