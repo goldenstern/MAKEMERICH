@@ -9,6 +9,7 @@ interface ParticleSphereProps {
   playerStake: number;
   lastAction: ActionType;
   onAnimationComplete: () => void;
+  onClick?: () => void;
 }
 
 interface Particle {
@@ -26,13 +27,14 @@ interface Particle {
 const POOL_PARTICLES = 1500;
 const PLAYER_PARTICLES = 500;
 
-export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake, lastAction, onAnimationComplete }) => {
+export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake, lastAction, onAnimationComplete, onClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [colors, setColors] = useState({ black: '#000000', gold: '#e5c44f' });
   const effectState = useRef<{ type: ActionType, progress: number, duration: number }>({ type: null, progress: 0, duration: 0 });
 
   useEffect(() => {
     const computedStyle = getComputedStyle(document.documentElement);
+    // Using --foreground and --primary ensures the colors match the theme
     const black = `hsl(${computedStyle.getPropertyValue('--foreground').trim()})`;
     const gold = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
     setColors({ black, gold });
@@ -82,7 +84,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const dpr = window.devicePixelRatio || 1;
+    let dpr = window.devicePixelRatio || 1;
     let width = canvas.offsetWidth;
     let height = canvas.offsetHeight;
     
@@ -92,7 +94,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     
     let rotation = 0;
     
-    const baseRadius = Math.min(width, height) * 0.3;
+    let baseRadius = Math.min(width, height) * 0.3;
 
     let animationFrameId: number;
 
@@ -110,9 +112,11 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       width = canvas.offsetWidth;
       height = canvas.offsetHeight;
       if(canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        dpr = window.devicePixelRatio || 1;
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
+        baseRadius = Math.min(width, height) * 0.3;
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -175,7 +179,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
       // Calculate radii
       const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-      let playerRadius = baseRadius * stakeRatio;
+      let playerRadius = baseRadius * Math.cbrt(stakeRatio); // Use cube root for volume perception
 
       // Handle animations affecting radius
       const { type, progress } = effectState.current;
@@ -224,5 +228,5 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
   }, [particles, colors, onAnimationComplete, playerStake, totalPool]);
 
-  return <canvas ref={canvasRef} className="w-full h-full aspect-square" />;
+  return <canvas ref={canvasRef} onClick={onClick} className="w-full h-full aspect-square cursor-pointer" />;
 };

@@ -35,7 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ParticleSphere } from "./particle-sphere";
+import { ActionType, ParticleSphere } from "./particle-sphere";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -356,7 +356,7 @@ const formatCountdown = (seconds: number) => {
 
 
 const Dashboard = () => {
-  const { systemData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress, contractAddress } = useWeb3();
+  const { systemData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress, contractAddress, lastAction, clearLastAction } = useWeb3();
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
   const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
@@ -519,7 +519,7 @@ const Dashboard = () => {
         </div>
         <Card className="md:col-span-2 lg:col-span-1 lg:order-1">
             <CardHeader>
-                <CardTitle>Stake & Wallet</CardTitle>
+                <CardTitle>Stake</CardTitle>
                 <CardDescription>Manage your staked tokens and wallet balance.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -576,6 +576,9 @@ const Dashboard = () => {
             <ParticleSphere
               totalPool={systemData?.totalPool ?? 0}
               playerStake={systemData?.playerBalance ?? 0}
+              lastAction={lastAction}
+              onAnimationComplete={clearLastAction}
+              onClick={handleMakeMeRichClick}
             />
           )}
         </div>
@@ -627,7 +630,7 @@ const Dashboard = () => {
 };
 
 export default function SystemUI() {
-  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData } = useWeb3();
+  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction } = useWeb3();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
@@ -656,9 +659,11 @@ export default function SystemUI() {
 
         if (currentBalance > prevBalance) {
           setShowConfetti(true);
+          setLastAction('win');
           toast({ title: "You Won!", description: "Your stake has been doubled." });
         } else if (currentBalance < prevBalance) {
           setShowTears(true);
+          setLastAction('lose');
           toast({ variant: "destructive", title: "You Lost...", description: "Your stake is gone. Better luck next time!" });
         } else {
            toast({ title: "Transaction Confirmed", description: "Your balance is unchanged." });
@@ -668,7 +673,7 @@ export default function SystemUI() {
       
       clearTransactionStatus();
     }
-  }, [transactionStatus, isDataFetching, systemData, clearTransactionStatus, toast]);
+  }, [transactionStatus, isDataFetching, systemData, clearTransactionStatus, toast, setLastAction]);
 
   // Reset the check flag if the transaction is no longer active
   React.useEffect(() => {
@@ -696,5 +701,3 @@ export default function SystemUI() {
     </div>
   );
 }
-
-    

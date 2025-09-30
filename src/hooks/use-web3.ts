@@ -8,6 +8,7 @@ import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { systemABI } from '@/lib/abi';
 import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError } from 'viem';
+import { ActionType } from '@/components/particle-sphere';
 
 export interface SystemData {
   playerBalance: number;
@@ -42,6 +43,7 @@ export interface Web3ContextType {
   isDataFetching: boolean;
   actionLoading: Record<string, boolean>;
   transactionStatus: TransactionStatus;
+  lastAction: ActionType;
   connectWallet: () => void;
   disconnectWallet: () => void;
   deposit: (amount: number) => Promise<void>;
@@ -51,6 +53,8 @@ export interface Web3ContextType {
   refreshData: () => Promise<SystemData | null>;
   clearTransactionStatus: () => void;
   getTransactionState: (action: string) => TransactionState;
+  setLastAction: (action: ActionType) => void;
+  clearLastAction: () => void;
   contractAddress?: string;
   tokenAddress?: string;
 }
@@ -82,6 +86,8 @@ export function useWeb3Provider(): Web3ContextType {
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [lastAction, setLastAction] = useState<ActionType>(null);
+
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
@@ -210,6 +216,10 @@ export function useWeb3Provider(): Web3ContextType {
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
   };
+  
+  const clearLastAction = () => {
+    setLastAction(null);
+  };
 
   const refreshData = useCallback(async (): Promise<SystemData | null> => {
     if(isDataFetching) return systemData;
@@ -223,9 +233,9 @@ export function useWeb3Provider(): Web3ContextType {
     action: string, 
     functionName: string, 
     args: any[] = [], 
-    options: { customToastTitle?: string; showSuccessToast?: boolean; gas?: bigint } = {}
+    options: { customToastTitle?: string; showSuccessToast?: boolean; gas?: bigint, actionType?: ActionType } = {}
   ) => {
-    const { customToastTitle, showSuccessToast = true, gas } = options;
+    const { customToastTitle, showSuccessToast = true, gas, actionType } = options;
 
     if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
@@ -248,6 +258,10 @@ export function useWeb3Provider(): Web3ContextType {
 
       if (receipt.status !== 'success') {
           throw new Error("Transaction failed.");
+      }
+
+      if (actionType) {
+        setLastAction(actionType);
       }
 
       if (showSuccessToast) {
@@ -325,7 +339,7 @@ export function useWeb3Provider(): Web3ContextType {
 
         toast({ title: "Approved!", description: "Staking tokens..." });
 
-        await handleTransaction('deposit', 'deposit', [amountInUnits], { customToastTitle: "Staking..." });
+        await handleTransaction('deposit', 'deposit', [amountInUnits], { customToastTitle: "Staking...", actionType: 'deposit' });
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
@@ -352,7 +366,7 @@ export function useWeb3Provider(): Web3ContextType {
     setLoadingState('withdraw', true);
     try {
       const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
-      await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
+      await handleTransaction('withdraw', 'withdraw', [amountInUnits], { actionType: 'withdraw'});
     } catch (error) {
     } finally {
         setLoadingState('withdraw', false);
@@ -366,7 +380,7 @@ export function useWeb3Provider(): Web3ContextType {
     }
      setLoadingState('withdrawAll', true);
     try {
-      await handleTransaction('withdrawAll', 'withdrawAll', []);
+      await handleTransaction('withdrawAll', 'withdrawAll', [], { actionType: 'withdraw'});
     } catch (error) {
     } finally {
       setLoadingState('withdrawAll', false);
@@ -412,6 +426,7 @@ export function useWeb3Provider(): Web3ContextType {
     isDataFetching,
     actionLoading,
     transactionStatus,
+    lastAction,
     connectWallet,
     disconnectWallet,
     deposit,
@@ -421,6 +436,8 @@ export function useWeb3Provider(): Web3ContextType {
     refreshData,
     clearTransactionStatus,
     getTransactionState,
+    setLastAction,
+    clearLastAction,
     contractAddress,
     tokenAddress
   };
