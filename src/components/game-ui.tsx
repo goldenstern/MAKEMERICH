@@ -334,7 +334,7 @@ const ConnectWalletView = () => {
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich, AI</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, stake your funds into Crowd Wisdom AI algorithm so double it or loose.</p>
+      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode: stake your funds into Crowd Wisdom AI algorithm so double it or loose.</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet
@@ -458,7 +458,7 @@ const Dashboard = () => {
   const handleShare = async () => {
     const shareData = {
       title: document.title,
-      text: "The apotheosis of clarity in WEB3 vibecode, stake your funds into Crowd Wisdom AI algorithm to double it or loose.",
+      text: "The apotheosis of clarity in WEB3 vibecode: stake your funds into Crowd Wisdom AI algorithm to double it or loose.",
       url: "https://mmr.angl.money/",
     };
     if (navigator.share) {
