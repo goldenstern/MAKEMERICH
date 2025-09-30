@@ -6,7 +6,7 @@ A quick guide to doubling your stake or losing it all with the power of Crowd Wi
 
 *   **Connect Wallet:** Click `Connect Wallet` to link your Web3 wallet.
 *   **Get ANGLS:** You need `ANGLS` tokens. Buy them on PancakeSwap, AZbit, or GSCB.
-*   **Stake Tokens:** Enter the amount of `ANGLS` you want to risk and click `Stake`. Your tokens are now in the game pool, ready for action.
+*   **Stake Tokens:** Enter the amount of `ANGLS` you want to risk and click `Stake`. Your tokens are now in the system's pool, ready for action.
 
 ### 2. Risk it All! 🎲
 
@@ -16,6 +16,6 @@ A quick guide to doubling your stake or losing it all with the power of Crowd Wi
 
 ### 3. Why Farm Attention? 👥
 
-*   **What is Attention?** Attention is the number of players in the game (`Pool Attention`). The more players, the larger the `Total Pool`. A larger pool means a healthier game and bigger potential wins for everyone.
-*   **How to Farm:** Click the `Farm Attention` button. This will open a share dialog to easily tell your friends or followers about the game.
-*   **Why it Matters:** By bringing new players, you directly help increase the total pool. It's a community effort—more attention benefits everyone!
+*   **What is Attention?** Attention is the number of participants in the system (`Pool Attention`). The more participants, the larger the `Total Pool`. A larger pool means a healthier system and bigger potential wins for everyone.
+*   **How to Farm:** Click the `Farm Attention` button. This will open a share dialog to easily tell your friends or followers about the system.
+*   **Why it Matters:** By bringing new participants, you directly help increase the total pool. It's a community effort—more attention benefits everyone!

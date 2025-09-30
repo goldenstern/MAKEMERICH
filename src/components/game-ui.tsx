@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -334,7 +333,7 @@ const ConnectWalletView = () => {
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich, AI</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, stake your funds into Crowd Wisdom AI algorithmic pool to double it or loose.</p>
+      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm so double it or loose.</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet
@@ -356,7 +355,7 @@ const formatCountdown = (seconds: number) => {
 
 
 const Dashboard = () => {
-  const { gameData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress, contractAddress } = useWeb3();
+  const { systemData, tokenBalance, tokenSymbol, deposit, withdraw, withdrawAll, makeMeRich, isLoading, actionLoading, getTransactionState, tokenAddress, contractAddress } = useWeb3();
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
   const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
@@ -381,12 +380,12 @@ const Dashboard = () => {
 
 
   React.useEffect(() => {
-    if (gameData?.nextAvailableTime) {
+    if (systemData?.nextAvailableTime) {
       const now = Math.floor(Date.now() / 1000);
-      const remaining = gameData.nextAvailableTime - now;
+      const remaining = systemData.nextAvailableTime - now;
       setCooldown(remaining > 0 ? remaining : 0);
     }
-  }, [gameData?.nextAvailableTime]);
+  }, [systemData?.nextAvailableTime]);
 
   React.useEffect(() => {
     if (cooldown > 0) {
@@ -475,17 +474,17 @@ const Dashboard = () => {
     }
   };
 
-  const isBalanceInsufficient = (gameData?.playerBalance ?? 0) < (gameData?.minBet ?? 0);
+  const isBalanceInsufficient = !isLoading && (systemData?.playerBalance ?? 0) < (systemData?.minBet ?? 0);
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-8 md:grid-cols-2">
         <div className="space-y-4 md:col-span-2 lg:col-span-1">
           <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard icon={PiggyBank} title="Total Pool" value={gameData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-            <StatCard icon={Users} title="Pool Attention" value={gameData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-            <StatCard icon={ArrowDownRight} title="Minimum Stake" value={gameData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-            <StatCard icon={Scaling} title="Risk Coefficient" value={gameData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
+            <StatCard icon={PiggyBank} title="Total Pool" value={systemData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Users} title="Pool Attention" value={systemData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+            <StatCard icon={ArrowDownRight} title="Minimum Stake" value={systemData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Scaling} title="Risk Coefficient" value={systemData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
           </div>
            <Card>
                 <CardHeader>
@@ -526,7 +525,7 @@ const Dashboard = () => {
                 <div className="space-y-1">
                     <div className="flex items-baseline gap-2">
                         {isLoading ? <Skeleton className="h-10 w-1/2" /> :
-                        <><span className="text-4xl font-bold text-primary">{gameData?.playerBalance.toLocaleString() ?? 0}</span>
+                        <><span className="text-4xl font-bold text-primary">{systemData?.playerBalance.toLocaleString() ?? 0}</span>
                         <span className="text-muted-foreground">{tokenSymbol || 'Tokens'}</span></>
                         }
                     </div>
@@ -554,17 +553,17 @@ const Dashboard = () => {
                                {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Stake
                            </Button>
-                           <Button type="button" onClick={amountForm.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (gameData?.playerBalance ?? 0) === 0}>
+                           <Button type="button" onClick={amountForm.handleSubmit(onWithdraw)} variant="secondary" className="w-full" disabled={actionLoading['withdraw'] || (systemData?.playerBalance ?? 0) === 0}>
                                {actionLoading['withdraw'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Withdraw
                            </Button>
                         </div>
-                        <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (gameData?.playerBalance ?? 0) === 0}>
+                        <Button type="button" variant="secondary" className="w-full" onClick={() => withdrawAll()} disabled={actionLoading['withdrawAll'] || (systemData?.playerBalance ?? 0) === 0}>
                            {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                            Withdraw All
                         </Button>
                         <Separator />
-                        <p className="text-xs text-center text-muted-foreground">A regular {gameData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
+                        <p className="text-xs text-center text-muted-foreground">A regular {systemData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
                     </form>
                 </Form>
                  
@@ -574,9 +573,9 @@ const Dashboard = () => {
       </div>
 
        <div className="text-center pt-8">
-            {isBalanceInsufficient && !isLoading ? (
+            {isBalanceInsufficient ? (
                 <h3 className="text-2xl font-bold font-headline mb-4 text-destructive">
-                    You need at least {gameData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
+                    You need at least {systemData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
                 </h3>
             ) : (
                 <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk it all?</h3>
@@ -600,7 +599,7 @@ const Dashboard = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will risk your entire stake ({gameData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward opportunity.
+                This action will risk your entire stake ({systemData?.playerBalance.toLocaleString()} {tokenSymbol}) for a chance to double it. This is a high-risk, high-reward opportunity.
               </AlertDialogDescription>
             </AlertDialogHeader>
              <div className="flex items-center space-x-2">
@@ -618,8 +617,8 @@ const Dashboard = () => {
   );
 };
 
-export default function GameUI() {
-  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, gameData } = useWeb3();
+export default function SystemUI() {
+  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData } = useWeb3();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
@@ -636,7 +635,7 @@ export default function GameUI() {
       transactionStatus.action === 'makeMeRich' &&
       transactionStatus.status === 'confirmed' &&
       !isDataFetching &&
-      gameData &&
+      systemData &&
       !hasCheckedWin.current
     ) {
       hasCheckedWin.current = true;
@@ -644,7 +643,7 @@ export default function GameUI() {
 
       if (prevBalanceStr) {
         const prevBalance = parseFloat(prevBalanceStr);
-        const currentBalance = gameData.playerBalance;
+        const currentBalance = systemData.playerBalance;
 
         if (currentBalance > prevBalance) {
           setShowConfetti(true);
@@ -660,7 +659,7 @@ export default function GameUI() {
       
       clearTransactionStatus();
     }
-  }, [transactionStatus, isDataFetching, gameData, clearTransactionStatus, toast]);
+  }, [transactionStatus, isDataFetching, systemData, clearTransactionStatus, toast]);
 
   // Reset the check flag if the transaction is no longer active
   React.useEffect(() => {

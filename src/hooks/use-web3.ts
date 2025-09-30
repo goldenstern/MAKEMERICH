@@ -6,10 +6,10 @@ import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, us
 import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
-import { gameABI } from '@/lib/abi';
+import { systemABI } from '@/lib/abi';
 import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError } from 'viem';
 
-export interface GameData {
+export interface SystemData {
   playerBalance: number;
   totalPool: number;
   numberOfPlayers: number;
@@ -37,7 +37,7 @@ export interface Web3ContextType {
   formattedAddress: string | null;
   tokenBalance: string;
   tokenSymbol: string | undefined;
-  gameData: GameData | null;
+  systemData: SystemData | null;
   isLoading: boolean;
   isDataFetching: boolean;
   actionLoading: Record<string, boolean>;
@@ -48,7 +48,7 @@ export interface Web3ContextType {
   withdraw: (amount: number) => Promise<void>;
   withdrawAll: () => Promise<void>;
   makeMeRich: () => Promise<void>;
-  refreshData: () => Promise<GameData | null>;
+  refreshData: () => Promise<SystemData | null>;
   clearTransactionStatus: () => void;
   getTransactionState: (action: string) => TransactionState;
   contractAddress?: string;
@@ -77,7 +77,7 @@ export function useWeb3Provider(): Web3ContextType {
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
-  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
@@ -89,8 +89,8 @@ export function useWeb3Provider(): Web3ContextType {
     
     setIsDataFetching(true);
     try {
-        const gameDataResult = await readContract(wagmiConfig, {
-            abi: gameABI,
+        const systemDataResult = await readContract(wagmiConfig, {
+            abi: systemABI,
             address: contractAddress,
             functionName: 'getAIData',
             args: [],
@@ -98,7 +98,7 @@ export function useWeb3Provider(): Web3ContextType {
         });
 
         const feePercentResult = await readContract(wagmiConfig, {
-            abi: gameABI,
+            abi: systemABI,
             address: contractAddress,
             functionName: 'feePercent',
             args: [],
@@ -106,26 +106,26 @@ export function useWeb3Provider(): Web3ContextType {
         });
 
         const tokenDecimals = await readContract(wagmiConfig, {
-          abi: gameABI,
+          abi: systemABI,
           address: contractAddress,
           functionName: 'tokenDecimals',
         });
 
 
-        const data: GameData = {
-            playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals as number)),
-            totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals as number)),
-            numberOfPlayers: Number((gameDataResult as any)[2]),
-            minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals as number)),
-            riskCoefficient: 100 - Number((gameDataResult as any)[4]),
+        const data: SystemData = {
+            playerBalance: parseFloat(formatUnits((systemDataResult as any)[0], tokenDecimals as number)),
+            totalPool: parseFloat(formatUnits((systemDataResult as any)[1], tokenDecimals as number)),
+            numberOfPlayers: Number((systemDataResult as any)[2]),
+            minBet: parseFloat(formatUnits((systemDataResult as any)[3], tokenDecimals as number)),
+            riskCoefficient: 100 - Number((systemDataResult as any)[4]),
             feePercent: feePercentResult ? Number(feePercentResult) : 3,
-            nextAvailableTime: Number((gameDataResult as any)[6]),
+            nextAvailableTime: Number((systemDataResult as any)[6]),
         };
-        setGameData(data);
+        setSystemData(data);
         return data;
     } catch (e) {
-        console.error("Error fetching game data:", e);
-        setGameData(null);
+        console.error("Error fetching system data:", e);
+        setSystemData(null);
         return null;
     } finally {
         setIsDataFetching(false);
@@ -147,7 +147,7 @@ export function useWeb3Provider(): Web3ContextType {
       refetchTokenBalance();
     } else {
       // Clear data when disconnected
-      setGameData(null);
+      setSystemData(null);
     }
   }, [isConnected, address, getAIData, refetchTokenBalance]);
   
@@ -158,7 +158,7 @@ export function useWeb3Provider(): Web3ContextType {
 
   const disconnectWallet = useCallback(async () => {
     // Forcefully clear all application state immediately
-    setGameData(null);
+    setSystemData(null);
     // Then, tell wagmi to disconnect
     await disconnectAsync();
     toast({ title: "Wallet Disconnected" });
@@ -191,7 +191,7 @@ export function useWeb3Provider(): Web3ContextType {
     const fetchDecimals = async () => {
         try {
             const decimals = await readContract(wagmiConfig, {
-                abi: gameABI,
+                abi: systemABI,
                 address: contractAddress,
                 functionName: 'tokenDecimals',
             });
@@ -211,13 +211,13 @@ export function useWeb3Provider(): Web3ContextType {
       setTransactionStatus({ action: null, status: null });
   };
 
-  const refreshData = useCallback(async (): Promise<GameData | null> => {
-    if(isDataFetching) return gameData;
+  const refreshData = useCallback(async (): Promise<SystemData | null> => {
+    if(isDataFetching) return systemData;
     if (!isConnected || !address) return null;
-    const freshGameData = await getAIData();
+    const freshSystemData = await getAIData();
     await refetchTokenBalance();
-    return freshGameData;
-  }, [getAIData, refetchTokenBalance, isDataFetching, gameData, isConnected, address]);
+    return freshSystemData;
+  }, [getAIData, refetchTokenBalance, isDataFetching, systemData, isConnected, address]);
 
   const handleTransaction = async (
     action: string, 
@@ -234,7 +234,7 @@ export function useWeb3Provider(): Web3ContextType {
     setTransactionState(action, 'awaiting_confirmation');
     try {
         const txHash = await writeContractAsync({
-            abi: gameABI,
+            abi: systemABI,
             address: contractAddress,
             functionName,
             args,
@@ -360,7 +360,7 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const withdrawAll = async () => {
-    if (!gameData || gameData.playerBalance <= 0) {
+    if (!systemData || systemData.playerBalance <= 0) {
       toast({ variant: "destructive", title: "No balance to withdraw" });
       return;
     }
@@ -374,17 +374,17 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const makeMeRich = async () => {
-    if (!gameData) {
-      toast({ variant: "destructive", title: "Error", description: "Game data not loaded." });
+    if (!systemData) {
+      toast({ variant: "destructive", title: "Error", description: "System data not loaded." });
       return;
     }
-     if (gameData.playerBalance < gameData.minBet) {
-       toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData.minBet} to play.` });
+     if (systemData.playerBalance < systemData.minBet) {
+       toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${systemData.minBet} to play.` });
        return;
     }
 
     try {
-      localStorage.setItem(MMR_PREV_BALANCE_KEY, gameData.playerBalance.toString());
+      localStorage.setItem(MMR_PREV_BALANCE_KEY, systemData.playerBalance.toString());
       await handleTransaction(
         'makeMeRich', 
         'makeMeRich', 
@@ -399,7 +399,7 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !gameData));
+  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !systemData));
 
   return {
     isConnected: isConnected,
@@ -407,7 +407,7 @@ export function useWeb3Provider(): Web3ContextType {
     formattedAddress,
     tokenBalance,
     tokenSymbol: tokenBalanceData?.symbol,
-    gameData,
+    systemData,
     isLoading,
     isDataFetching,
     actionLoading,
