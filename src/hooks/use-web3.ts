@@ -90,12 +90,16 @@ export function useWeb3Provider(): Web3ContextType {
     }
   }, [wagmiIsConnected]);
 
+
   useEffect(() => {
-    if (localIsConnected && address) {
+    if (address) {
       getAIData(address);
       refetchTokenBalance();
+    } else {
+      setGameData(null);
     }
-  }, [address, localIsConnected]);
+  }, [address]);
+
 
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
@@ -191,8 +195,6 @@ export function useWeb3Provider(): Web3ContextType {
   useEffect(() => {
     if (localIsConnected && address) {
         toast({ title: "Wallet Connected" });
-        getAIData(address);
-        refetchTokenBalance();
     }
   }, [address, localIsConnected]);
 
@@ -246,20 +248,18 @@ export function useWeb3Provider(): Web3ContextType {
         
         if (e instanceof BaseError) {
           const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
+          const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+          const txError = e.walk((err) => err instanceof TransactionExecutionError);
+
           if (userRejectedError) {
             reason = "User rejected the request";
+          } else if (revertError instanceof ContractFunctionRevertedError) {
+            reason = revertError.reason ?? "An unknown contract error occurred.";
+          } else if (txError instanceof TransactionExecutionError) {
+            // This is the correct place to get errors like 'out of gas'
+            reason = txError.cause?.message || txError.shortMessage;
           } else {
-            const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
-            if (revertError instanceof ContractFunctionRevertedError) {
-              reason = revertError.reason ?? "An unknown contract error occurred.";
-            } else {
-              const txError = e.walk((err) => err instanceof TransactionExecutionError);
-              if (txError instanceof TransactionExecutionError) {
-                reason = txError.shortMessage;
-              } else {
-                reason = e.shortMessage;
-              }
-            }
+            reason = e.shortMessage;
           }
         }
         
