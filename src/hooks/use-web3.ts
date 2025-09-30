@@ -72,87 +72,20 @@ const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected: wagmiIsConnected, isConnecting } = useAccount();
+  const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
-  const [localIsConnected, setLocalIsConnected] = useState(false);
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
-
-  useEffect(() => {
-    setLocalIsConnected(wagmiIsConnected);
-    if (!wagmiIsConnected) {
-        setGameData(null);
-    }
-  }, [wagmiIsConnected]);
-
-
-  useEffect(() => {
-    if (address) {
-      getAIData(address);
-      refetchTokenBalance();
-    } else {
-      setGameData(null);
-    }
-  }, [address]);
-
-
-
-  const setTransactionState = (action: string, stage: TransactionStage) => {
-    setTransactionStates(prev => ({
-      ...prev,
-      [action]: {
-        isActive: stage !== 'idle' && stage !== 'done' && stage !== 'error',
-        stage,
-      }
-    }));
-  };
-
-  const getTransactionState = (action: string): TransactionState => {
-    return transactionStates[action] || { isActive: false, stage: 'idle' };
-  };
-  
-  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
-  const setLoadingState = (action: string, state: boolean) => {
-    setActionLoading(prev => ({ ...prev, [action]: state }));
-  };
-
-  const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
-
-  const connectWallet = () => {
-    if (!localIsConnected) {
-      connect({ connector: metaMask() });
-    }
-  };
-
-  const disconnectWallet = () => {
-    disconnect();
-    setGameData(null); 
-    setLocalIsConnected(false);
-    toast({ title: "Wallet Disconnected" });
-  };
-
-
-  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
-    address,
-    token: tokenAddress,
-    query: {
-        enabled: localIsConnected && !!address,
-        refetchInterval: 30000,
-    }
-  });
-  
-  const tokenDecimals = 8;
-  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
+  const hasShownConnectToast = useRef(false);
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!localIsConnected || !addressToUse) return null;
+    if (!isConnected || !addressToUse) return null;
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -189,15 +122,69 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig, localIsConnected]);
+  }, [address, wagmiConfig, isConnected]);
 
+  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
+    address,
+    token: tokenAddress,
+    query: {
+        enabled: isConnected && !!address,
+        refetchInterval: 30000,
+    }
+  });
 
   useEffect(() => {
-    if (localIsConnected && address) {
+    if (isConnected && address) {
+      if (!hasShownConnectToast.current) {
         toast({ title: "Wallet Connected" });
+        hasShownConnectToast.current = true;
+      }
+      getAIData(address);
+      refetchTokenBalance();
+    } else {
+      setGameData(null);
+      hasShownConnectToast.current = false;
     }
-  }, [address, localIsConnected]);
+  }, [isConnected, address, getAIData, refetchTokenBalance, toast]);
 
+
+
+  const setTransactionState = (action: string, stage: TransactionStage) => {
+    setTransactionStates(prev => ({
+      ...prev,
+      [action]: {
+        isActive: stage !== 'idle' && stage !== 'done' && stage !== 'error',
+        stage,
+      }
+    }));
+  };
+
+  const getTransactionState = (action: string): TransactionState => {
+    return transactionStates[action] || { isActive: false, stage: 'idle' };
+  };
+  
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const setLoadingState = (action: string, state: boolean) => {
+    setActionLoading(prev => ({ ...prev, [action]: state }));
+  };
+
+  const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
+
+  const connectWallet = () => {
+    if (!isConnected) {
+      connect({ connector: metaMask() });
+    }
+  };
+
+  const disconnectWallet = () => {
+    disconnect();
+    setGameData(null); 
+    toast({ title: "Wallet Disconnected" });
+  };
+  
+  const tokenDecimals = 8;
+  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
@@ -214,7 +201,7 @@ export function useWeb3Provider(): Web3ContextType {
   const handleTransaction = async (action: string, functionName: string, args: any[] = [], options: { customToastTitle?: string; showSuccessToast?: boolean } = {}) => {
     const { customToastTitle, showSuccessToast = true } = options;
 
-    if (!localIsConnected || !address) {
+    if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
     }
@@ -256,8 +243,7 @@ export function useWeb3Provider(): Web3ContextType {
           } else if (revertError instanceof ContractFunctionRevertedError) {
             reason = revertError.reason ?? "An unknown contract error occurred.";
           } else if (txError instanceof TransactionExecutionError) {
-            // This is the correct place to get errors like 'out of gas'
-            reason = txError.cause?.message || txError.shortMessage;
+            reason = txError.cause?.message || "An unknown transaction error occurred.";
           } else {
             reason = e.shortMessage;
           }
@@ -368,10 +354,10 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (localIsConnected && isTokenBalanceLoading && !gameData);
+  const isLoading = isConnecting || (isConnected && isTokenBalanceLoading && !gameData);
 
   return {
-    isConnected: localIsConnected,
+    isConnected: isConnected,
     address,
     formattedAddress,
     tokenBalance,
