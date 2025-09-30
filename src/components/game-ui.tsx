@@ -480,7 +480,44 @@ const Dashboard = () => {
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-         <Card className="md:col-span-2 lg:col-span-1">
+        <div className="space-y-4 md:col-span-2 lg:col-span-1 lg:order-3">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard icon={PiggyBank} title="Total Pool" value={systemData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Users} title="Pool Attention" value={systemData?.numberOfPlayers ?? 0} isLoading={isLoading} />
+            <StatCard icon={ArrowDownRight} title="Minimum Stake" value={systemData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
+            <StatCard icon={Scaling} title="Risk Coefficient" value={systemData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
+          </div>
+           <Card>
+                <CardHeader>
+                     <CardTitle className="text-sm font-medium">Buy/Sell Angl Shards (ANGLS) Now & DYOR</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                       <Button variant="default" size="sm" className="w-full">
+                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                       </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
+                        </Button>
+                        <Button variant="default" size="sm" className="w-full">
+                            <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
+                        </Button>
+                    </div>
+                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
+                            Litepaper
+                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <a href={tokenExplorerUrl} target="_blank" rel="noopener noreferrer">Token 0x...</a>
+                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool 0x...</a>
+                         </Button>
+                     </div>
+                </CardContent>
+            </Card>
+        </div>
+        <Card className="md:col-span-2 lg:col-span-1 lg:order-1">
             <CardHeader>
                 <CardTitle>Stake & Wallet</CardTitle>
                 <CardDescription>Manage your staked tokens and wallet balance.</CardDescription>
@@ -530,11 +567,9 @@ const Dashboard = () => {
                         <p className="text-xs text-center text-muted-foreground">A regular {systemData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
                     </form>
                 </Form>
-                 
-               
             </CardContent>
         </Card>
-         <div className="md:col-span-2 lg:col-span-1 relative">
+         <div className="md:col-span-2 lg:col-span-1 relative lg:order-2">
           {isLoading ? (
             <Skeleton className="aspect-square w-full rounded-lg" />
           ) : (
@@ -544,49 +579,12 @@ const Dashboard = () => {
             />
           )}
         </div>
-        <div className="space-y-4 md:col-span-2 lg:col-span-1">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard icon={PiggyBank} title="Total Pool" value={systemData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-            <StatCard icon={Users} title="Pool Attention" value={systemData?.numberOfPlayers ?? 0} isLoading={isLoading} />
-            <StatCard icon={ArrowDownRight} title="Minimum Stake" value={systemData?.minBet.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
-            <StatCard icon={Scaling} title="Risk Coefficient" value={systemData?.riskCoefficient ?? 0} isLoading={isLoading} unit="%" />
-          </div>
-           <Card>
-                <CardHeader>
-                     <CardTitle className="text-sm font-medium">Buy/Sell Angl Shards (ANGLS) Now & DYOR</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                       <Button variant="default" size="sm" className="w-full">
-                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
-                       </Button>
-                        <Button variant="default" size="sm" className="w-full">
-                            <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
-                        </Button>
-                        <Button variant="default" size="sm" className="w-full">
-                            <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
-                        </Button>
-                    </div>
-                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                          <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
-                            Litepaper
-                         </Button>
-                         <Button variant="outline" size="sm" className="w-full" asChild>
-                            <a href={tokenExplorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
-                         </Button>
-                         <Button variant="outline" size="sm" className="w-full" asChild>
-                            <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool Contract</a>
-                         </Button>
-                     </div>
-                </CardContent>
-            </Card>
-        </div>
       </div>
 
        <div className="text-center pt-8">
             {isBalanceInsufficient && !isLoading ? (
                 <h3 className="text-2xl font-bold font-headline mb-4 text-destructive">
-                    You need at least {systemData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
+                    You need at least {systemData?.minBet.toLocaleString()} {tokenSymbol} in your stake to activate MMR AI.
                 </h3>
             ) : (
                 <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk it all?</h3>
@@ -698,3 +696,5 @@ export default function SystemUI() {
     </div>
   );
 }
+
+    
