@@ -24,8 +24,8 @@ interface Particle {
 }
 
 const LOGO = '⨻';
-const TOTAL_PARTICLES = 2000;
-const MIN_PLAYER_PARTICLES = 20;
+const POOL_PARTICLES = 1500;
+const PLAYER_PARTICLES = 500;
 
 export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake, lastAction, onAnimationComplete }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,44 +49,31 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     }
   }, [lastAction]);
 
-  const { poolParticles, playerParticles } = useMemo(() => {
-    const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-    let numPlayerParticles = Math.floor(stakeRatio * TOTAL_PARTICLES);
-    
-    if (playerStake > 0 && numPlayerParticles < MIN_PLAYER_PARTICLES) {
-      numPlayerParticles = MIN_PLAYER_PARTICLES;
-    }
-    if (numPlayerParticles > TOTAL_PARTICLES) {
-      numPlayerParticles = TOTAL_PARTICLES;
-    }
-    
-    const numPoolParticles = TOTAL_PARTICLES - numPlayerParticles;
-
+  const particles = useMemo(() => {
     const createParticles = (count: number, color: string): Particle[] => {
-      const parts: Particle[] = [];
-      for (let i = 0; i < count; i++) {
-        const theta = Math.acos((2 * (i + 0.5)) / count - 1);
-        const phi = Math.sqrt(count * Math.PI) * theta;
-        
-        const x = 1 * Math.cos(phi) * Math.sin(theta);
-        const y = 1 * Math.sin(phi) * Math.sin(theta);
-        const z = 1 * Math.cos(theta);
+        const parts: Particle[] = [];
+        for (let i = 0; i < count; i++) {
+            const theta = Math.acos((2 * (i + 0.5)) / count - 1);
+            const phi = Math.sqrt(count * Math.PI) * theta;
 
-        parts.push({
-          theta: theta, phi: phi,
-          x: x, y: y, z: z,
-          ox: x, oy: y, oz: z,
-          color: color,
-        });
-      }
-      return parts;
+            const x = 1 * Math.cos(phi) * Math.sin(theta);
+            const y = 1 * Math.sin(phi) * Math.sin(theta);
+            const z = 1 * Math.cos(theta);
+
+            parts.push({
+                theta: theta, phi: phi,
+                x: x, y: y, z: z,
+                ox: x, oy: y, oz: z,
+                color: color,
+            });
+        }
+        return parts;
     };
-
     return {
-      poolParticles: createParticles(numPoolParticles, colors.black),
-      playerParticles: createParticles(numPlayerParticles, colors.gold),
-    };
-  }, [totalPool, playerStake, colors]);
+        pool: createParticles(POOL_PARTICLES, colors.black),
+        player: createParticles(PLAYER_PARTICLES, colors.gold),
+    }
+  }, [colors]);
 
 
   useEffect(() => {
@@ -108,8 +95,6 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     
     const baseRadius = Math.min(width, height) * 0.3;
 
-    const allParticles = [...poolParticles, ...playerParticles];
-    
     let animationFrameId: number;
 
     const trianglePath = new Path2D();
@@ -142,45 +127,9 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         onAnimationComplete();
       }
 
-      const getRadius = (p: Particle) => {
-        const { type, progress } = effectState.current;
-        const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        const p_progress = easeInOutCubic(progress);
-
-        if (type === 'deposit' && p.color === colors.black) {
-           return baseRadius * (1 - 0.5 * Math.sin(p_progress * Math.PI));
-        }
-        if (type === 'withdraw' && p.color === colors.gold) {
-            return baseRadius * (1 + p_progress * 2);
-        }
-        if (type === 'win' && p.color === colors.gold) {
-           return baseRadius * (1 + 0.2 * Math.sin(p_progress * Math.PI * 2));
-        }
-        if (type === 'lose' && p.color === colors.gold) {
-           return baseRadius * (1 - p_progress);
-        }
-        return baseRadius;
-      }
-
-      const getAlpha = (p: Particle, projectedZ: number) => {
-        const { type, progress } = effectState.current;
-        if (type === 'withdraw' && p.color === colors.gold) {
-          return (1 - progress);
-        }
-         if (type === 'lose' && p.color === colors.gold) {
-          return (1 - progress);
-        }
-        return Math.max(0, Math.min(1, (projectedZ + baseRadius) / (2 * baseRadius)));
-      }
+      const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       
-      const rotateY = (p: Particle, angle: number) => {
-          const x = p.x * Math.cos(angle) + p.z * Math.sin(angle);
-          const z = -p.x * Math.sin(angle) + p.z * Math.cos(angle);
-          return { ...p, x, z };
-      }
-
-      const project = (p: Particle, w: number, h: number) => {
-        const radius = getRadius(p);
+      const project = (p: Particle, w: number, h: number, radius: number) => {
         const perspective = w * 0.8;
         const x = p.x * radius;
         const y = p.y * radius;
@@ -190,26 +139,69 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         return {
           x: x * projection + w / 2,
           y: y * projection + h / 2,
-          alpha: getAlpha(p, z),
+          alpha: Math.max(0, Math.min(1, (z + radius) / (2 * radius))),
           scale: projection
         };
       }
+
+      const getAlpha = (p: Particle, currentAlpha: number) => {
+        const { type, progress } = effectState.current;
+        if ((type === 'withdraw' || type === 'lose') && p.color === colors.gold) {
+          return currentAlpha * (1 - progress);
+        }
+        return currentAlpha;
+      }
       
-      const drawParticle = (p: Particle) => {
-        let rotated = rotateY(p, rotation);
-        const proj = project(rotated, width, height);
-        
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = proj.alpha;
-        
-        ctx.save();
-        ctx.translate(proj.x, proj.y);
-        ctx.scale(proj.scale, proj.scale);
-        ctx.fill(trianglePath);
-        ctx.restore();
+      const rotateY = (p: Particle, angle: number) => {
+          const x = p.x * Math.cos(angle) + p.z * Math.sin(angle);
+          const z = -p.x * Math.sin(angle) + p.z * Math.cos(angle);
+          return { ...p, x, z };
+      }
+      
+      const drawParticles = (particleArray: Particle[], radius: number) => {
+        particleArray.forEach(p => {
+            let rotated = rotateY(p, rotation);
+            const proj = project(rotated, width, height, radius);
+            
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = getAlpha(p, proj.alpha);
+            
+            ctx.save();
+            ctx.translate(proj.x, proj.y);
+            ctx.scale(proj.scale, proj.scale);
+            ctx.fill(trianglePath);
+            ctx.restore();
+        });
       }
 
-      allParticles.forEach(drawParticle);
+      // Calculate radii
+      const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
+      let playerRadius = baseRadius * stakeRatio;
+
+      // Handle animations affecting radius
+      const { type, progress } = effectState.current;
+      const p_progress = easeInOutCubic(progress);
+      
+      let poolRadius = baseRadius;
+      if (type === 'deposit') {
+          poolRadius = baseRadius * (1 - 0.2 * Math.sin(p_progress * Math.PI));
+      }
+      if (type === 'withdraw' && playerStake > 0) { // Check stake to avoid animation on withdraw all
+          playerRadius = playerRadius * (1 + p_progress * 2);
+      }
+      if (type === 'win') {
+          playerRadius = playerRadius * (1 + 0.5 * Math.sin(p_progress * Math.PI * 2));
+      }
+       if (type === 'lose') {
+          playerRadius = playerRadius * (1 - p_progress);
+      }
+
+      // Draw spheres
+      drawParticles(particles.pool, poolRadius);
+      if (playerStake > 0) {
+        drawParticles(particles.player, playerRadius);
+      }
+
 
       // Draw and rotate the logo
       ctx.globalAlpha = 1;
@@ -229,6 +221,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     }
 
     const resizeObserver = new ResizeObserver(() => {
+        if (!canvas) return;
         width = canvas.offsetWidth;
         height = canvas.offsetHeight;
         canvas.width = width * dpr;
@@ -244,7 +237,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       resizeObserver.disconnect();
     };
 
-  }, [poolParticles, playerParticles, colors, onAnimationComplete]);
+  }, [particles, colors, onAnimationComplete, playerStake, totalPool]);
 
   return <canvas ref={canvasRef} className="w-full h-full aspect-square" />;
 };
