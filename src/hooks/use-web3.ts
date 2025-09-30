@@ -1,9 +1,6 @@
-
-
-      
 "use client";
 
-import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
@@ -74,7 +71,7 @@ const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected: wagmiIsConnected, isConnecting } = useAccount();
+  const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
@@ -84,9 +81,6 @@ export function useWeb3Provider(): Web3ContextType {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
   
-  const isDisconnecting = useRef(false);
-  const [isConnected, setIsConnected] = useState(false);
-
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
     if (!addressToUse) return null;
@@ -146,28 +140,13 @@ export function useWeb3Provider(): Web3ContextType {
   });
 
   useEffect(() => {
-    // If a disconnect action was just triggered, ignore wagmi's state
-    // until the disconnect process is fully complete (isDisconnecting.current is false).
-    if (isDisconnecting.current) {
-        return; 
-    }
-    
-    // Handle connection
-    if (wagmiIsConnected && address) {
-        if (!isConnected) { 
-            setIsConnected(true);
-            toast({ title: "Wallet Connected" });
-            getAIData(address);
-            refetchTokenBalance();
-        }
+    if (isConnected && address) {
+      getAIData(address);
+      refetchTokenBalance();
     } else {
-        // Handle disconnection
-        if (isConnected) { 
-            setIsConnected(false);
-            setGameData(null);
-        }
+      setGameData(null);
     }
-}, [wagmiIsConnected, address, isConnected, getAIData, refetchTokenBalance, toast]);
+  }, [isConnected, address, getAIData, refetchTokenBalance]);
 
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
@@ -193,17 +172,11 @@ export function useWeb3Provider(): Web3ContextType {
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
   const connectWallet = () => {
-      isDisconnecting.current = false;
       connect({ connector: metaMask() });
   };
 
   const disconnectWallet = () => {
-    isDisconnecting.current = true;
-    setIsConnected(false); 
-    setGameData(null);
     disconnect();
-    toast({ title: "Wallet Disconnected" });
-    setTimeout(() => { isDisconnecting.current = false; }, 500);
   };
   
   const [tokenDecimals, setTokenDecimals] = useState(8);
@@ -221,8 +194,10 @@ export function useWeb3Provider(): Web3ContextType {
             console.error("Failed to fetch token decimals", error);
         }
     };
-    fetchDecimals();
-  }, [wagmiConfig]);
+    if (isConnected) {
+        fetchDecimals();
+    }
+  }, [wagmiConfig, isConnected]);
 
 
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
@@ -233,10 +208,11 @@ export function useWeb3Provider(): Web3ContextType {
 
   const refreshData = useCallback(async (): Promise<GameData | null> => {
     if(isDataFetching) return gameData;
+    if (!isConnected || !address) return null;
     const freshGameData = await getAIData();
     await refetchTokenBalance();
     return freshGameData;
-  }, [getAIData, refetchTokenBalance, isDataFetching, gameData]);
+  }, [getAIData, refetchTokenBalance, isDataFetching, gameData, isConnected, address]);
 
 
   const handleTransaction = async (
@@ -399,6 +375,11 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ variant: "destructive", title: "Error", description: "Game data not loaded." });
       return;
     }
+    if (gameData.playerBalance < gameData.minBet) {
+      toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData.minBet} to play.` });
+      return;
+    }
+
     try {
       localStorage.setItem(MMR_PREV_BALANCE_KEY, gameData.playerBalance.toString());
       await handleTransaction(
@@ -407,7 +388,7 @@ export function useWeb3Provider(): Web3ContextType {
         [], 
         { 
           showSuccessToast: false,
-          gas: 250000n, // Set gas limit to 250,000
+          gas: 250000n,
         }
       );
     } catch (error) {
@@ -415,7 +396,7 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (wagmiIsConnected && isTokenBalanceLoading && !gameData);
+  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !gameData));
 
   return {
     isConnected: isConnected,
@@ -441,6 +422,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
-    
-    
