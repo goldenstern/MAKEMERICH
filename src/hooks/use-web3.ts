@@ -1,4 +1,5 @@
 
+      
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
@@ -144,30 +145,33 @@ export function useWeb3Provider(): Web3ContextType {
   });
 
   useEffect(() => {
+    // If a disconnect action was just triggered, ignore wagmi's state
+    // until the disconnect process is fully complete (isDisconnecting.current is false).
     if (isDisconnecting.current) {
-        // If we are in the process of disconnecting, ignore any updates from wagmi
-        // until the disconnection is complete and the flag is reset.
         if (!wagmiIsConnected) {
+            // Once wagmi confirms disconnection, reset the flag.
             isDisconnecting.current = false;
-            setIsConnected(false);
         }
-        return;
+        return; // Don't process any connection changes while disconnecting.
     }
     
+    // Handle connection
     if (wagmiIsConnected && address) {
-        if (!isConnected) { // Prevents re-fetching data on every render
+        if (!isConnected) { // Prevents re-fetching data on every render if already connected
             setIsConnected(true);
             toast({ title: "Wallet Connected" });
             getAIData(address);
             refetchTokenBalance();
         }
     } else {
-        if (isConnected) { // If app state is connected but wagmi is not
+        // Handle disconnection
+        if (isConnected) { 
             setIsConnected(false);
             setGameData(null);
         }
     }
 }, [wagmiIsConnected, address, isConnected, getAIData, refetchTokenBalance, toast]);
+
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
     setTransactionStates(prev => ({
@@ -197,10 +201,10 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const disconnectWallet = () => {
-    isDisconnecting.current = true;
-    setIsConnected(false);
-    setGameData(null);
-    disconnect();
+    isDisconnecting.current = true; // Set the flag to indicate a disconnect is in progress
+    setIsConnected(false); // Immediately update the app's state
+    setGameData(null); // Immediately clear game data
+    disconnect(); // Trigger the async disconnect in wagmi
     toast({ title: "Wallet Disconnected" });
   };
   
@@ -237,8 +241,13 @@ export function useWeb3Provider(): Web3ContextType {
   }, [getAIData, refetchTokenBalance, isDataFetching, gameData]);
 
 
-  const handleTransaction = async (action: string, functionName: string, args: any[] = [], options: { customToastTitle?: string; showSuccessToast?: boolean } = {}) => {
-    const { customToastTitle, showSuccessToast = true } = options;
+  const handleTransaction = async (
+    action: string, 
+    functionName: string, 
+    args: any[] = [], 
+    options: { customToastTitle?: string; showSuccessToast?: boolean; gas?: bigint } = {}
+  ) => {
+    const { customToastTitle, showSuccessToast = true, gas } = options;
 
     if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
@@ -252,6 +261,7 @@ export function useWeb3Provider(): Web3ContextType {
             functionName,
             args,
             account: address,
+            gas,
         });
       setTransactionState(action, 'processing');
       toast({ title: customToastTitle || "Transaction Sent", description: "Waiting for confirmation..." });
@@ -283,7 +293,7 @@ export function useWeb3Provider(): Web3ContextType {
             } else {
                const txError = e.walk((err) => err instanceof TransactionExecutionError);
                if (txError instanceof TransactionExecutionError) {
-                   reason = txError.cause?.message || txError.shortMessage || "An unknown transaction error occurred.";
+                   reason = txError.cause?.message || "An unknown transaction error occurred.";
                } else {
                    reason = e.shortMessage;
                }
@@ -390,7 +400,15 @@ export function useWeb3Provider(): Web3ContextType {
     }
     try {
       localStorage.setItem(MMR_PREV_BALANCE_KEY, gameData.playerBalance.toString());
-      await handleTransaction('makeMeRich', 'makeMeRich', [], { showSuccessToast: false });
+      await handleTransaction(
+        'makeMeRich', 
+        'makeMeRich', 
+        [], 
+        { 
+          showSuccessToast: false,
+          gas: 250000n, // Set gas limit to 250,000
+        }
+      );
     } catch (error) {
       localStorage.removeItem(MMR_PREV_BALANCE_KEY);
     }
@@ -423,4 +441,5 @@ export function useWeb3Provider(): Web3ContextType {
   };
 }
 
+    
     
