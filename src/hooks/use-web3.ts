@@ -238,8 +238,9 @@ export function useWeb3Provider(): Web3ContextType {
     const { customToastTitle, showSuccessToast = true, gas, actionType } = options;
 
     if (!isConnected || !address) {
-        toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
-        return;
+      const errorMsg = "Wallet not connected.";
+      toast({ variant: "destructive", title: "Error", description: errorMsg });
+      throw new Error(errorMsg);
     }
     setTransactionState(action, 'awaiting_confirmation');
     try {
@@ -284,8 +285,6 @@ export function useWeb3Provider(): Web3ContextType {
           } else if (revertError instanceof ContractFunctionRevertedError) {
              reason = revertError.reason ?? "An unknown contract error occurred.";
           } else if (txError instanceof TransactionExecutionError) {
-             // This is where "out of gas" and other execution errors are caught.
-             // We access `cause` to get the real underlying error.
              reason = txError.cause?.message || txError.shortMessage || "Transaction execution error.";
           } else {
              reason = e.shortMessage;
@@ -297,7 +296,7 @@ export function useWeb3Provider(): Web3ContextType {
        
         setTransactionState(action, 'error');
         setTimeout(() => setTransactionState(action, 'idle'), 2000);
-        throw new Error(reason); 
+        throw new Error(finalReason); 
     }
   };
 
@@ -344,12 +343,7 @@ export function useWeb3Provider(): Web3ContextType {
 
     } catch (e: any) {
         if (!(e instanceof Error && e.message.includes("User rejected the request"))) {
-            if (e instanceof BaseError) {
-                const reason = e.shortMessage || e.message;
-                toast({ variant: "destructive", title: "Deposit Error", description: reason });
-            } else {
-                toast({ variant: "destructive", title: "Deposit Error", description: "An unknown error occurred during deposit." });
-            }
+            toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -368,6 +362,7 @@ export function useWeb3Provider(): Web3ContextType {
       const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
       await handleTransaction('withdraw', 'withdraw', [amountInUnits], { actionType: 'withdraw'});
     } catch (error) {
+      // Error is already handled by handleTransaction
     } finally {
         setLoadingState('withdraw', false);
     }
@@ -382,6 +377,7 @@ export function useWeb3Provider(): Web3ContextType {
     try {
       await handleTransaction('withdrawAll', 'withdrawAll', [], { actionType: 'withdraw'});
     } catch (error) {
+      // Error is already handled by handleTransaction
     } finally {
       setLoadingState('withdrawAll', false);
     }
@@ -409,6 +405,7 @@ export function useWeb3Provider(): Web3ContextType {
         }
       );
     } catch (error) {
+      // Error is already handled by handleTransaction. Clean up local storage here.
       localStorage.removeItem(MMR_PREV_BALANCE_KEY);
     }
   };
@@ -442,3 +439,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+    
