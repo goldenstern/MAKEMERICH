@@ -476,11 +476,12 @@ const Dashboard = () => {
   };
 
   const isBalanceInsufficient = !isLoading && (systemData?.playerBalance ?? 0) < (systemData?.minBet ?? 0);
+  const isMMRDisabled = getTransactionState('makeMeRich').isActive || isBalanceInsufficient || cooldown > 0;
 
   return (
     <main className="p-4 sm:p-6 md:p-8 space-y-8">
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <div className="space-y-4 md:col-span-2 lg:col-span-1 lg:order-3">
+        <div className="space-y-4 md:col-span-2 lg:col-span-1 lg:order-last">
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard icon={PiggyBank} title="Total Pool" value={systemData?.totalPool.toLocaleString() ?? 0} isLoading={isLoading} unit={tokenSymbol || ''} />
             <StatCard icon={Users} title="Pool Attention" value={systemData?.numberOfPlayers ?? 0} isLoading={isLoading} />
@@ -517,7 +518,7 @@ const Dashboard = () => {
                 </CardContent>
             </Card>
         </div>
-        <Card className="md:col-span-2 lg:col-span-1 lg:order-1">
+        <Card className="md:col-span-2 lg:col-span-1 lg:order-first">
             <CardHeader>
                 <CardTitle>Stake</CardTitle>
                 <CardDescription>Manage your staked tokens.</CardDescription>
@@ -569,7 +570,7 @@ const Dashboard = () => {
                 </Form>
             </CardContent>
         </Card>
-         <div className="md:col-span-2 lg:col-span-1 relative lg:order-2">
+         <div className="md:col-span-2 lg:col-span-1 relative lg:order-none">
           {isLoading ? (
             <Skeleton className="aspect-square w-full rounded-lg" />
           ) : (
@@ -579,6 +580,7 @@ const Dashboard = () => {
               lastAction={lastAction}
               onAnimationComplete={clearLastAction}
               onClick={handleMakeMeRichClick}
+              disabled={isMMRDisabled}
             />
           )}
         </div>
@@ -597,7 +599,7 @@ const Dashboard = () => {
                   size="lg" 
                   className="w-full h-16 text-xl font-bold shadow-lg transform hover:scale-105 transition-transform bg-primary hover:bg-primary/90" 
                   onClick={handleMakeMeRichClick} 
-                  disabled={getTransactionState('makeMeRich').isActive || isBalanceInsufficient || cooldown > 0}
+                  disabled={isMMRDisabled}
               >
                   {getMakeMeRichButtonContent()}
               </Button>
