@@ -253,7 +253,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
       // Calculate radii
       const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-      let playerRadius = baseRadius * stakeRatio; 
+      let playerRadius = baseRadius * stakeRatio;
 
       // Handle animations affecting radius
       const { type, progress } = effectState.current;
@@ -277,6 +277,18 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       drawParticles(particles.pool, poolRadius);
       if (playerStake > 0) {
         drawParticles(particles.player, playerRadius);
+      }
+
+      // Draw the cross if player has a stake
+      if (playerStake > 0) {
+        ctx.save();
+        ctx.font = 'bold 48px "Space Grotesk", sans-serif';
+        ctx.fillStyle = colors.gold;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.8;
+        ctx.fillText('✕', width / 2, height / 2);
+        ctx.restore();
       }
 
       rotation += 0.002;
