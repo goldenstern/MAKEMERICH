@@ -71,16 +71,18 @@ const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected, isConnecting } = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { address, isConnected, isConnecting, chainId } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect, disconnectAsync } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
-  const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
-  
+  const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
     if (!addressToUse) return null;
@@ -129,7 +131,7 @@ export function useWeb3Provider(): Web3ContextType {
         setIsDataFetching(false);
     }
   }, [address, wagmiConfig]);
-
+  
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
     token: tokenAddress,
@@ -144,9 +146,23 @@ export function useWeb3Provider(): Web3ContextType {
       getAIData(address);
       refetchTokenBalance();
     } else {
+      // Clear data when disconnected
       setGameData(null);
     }
   }, [isConnected, address, getAIData, refetchTokenBalance]);
+  
+  const connectWallet = useCallback(() => {
+    const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
+    connect({ connector: metaMaskConnector ?? connectors[0] });
+  }, [connect, connectors]);
+
+  const disconnectWallet = useCallback(async () => {
+    // Forcefully clear all application state immediately
+    setGameData(null);
+    // Then, tell wagmi to disconnect
+    await disconnectAsync();
+    toast({ title: "Wallet Disconnected" });
+  }, [disconnectAsync, toast]);
 
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
@@ -163,22 +179,12 @@ export function useWeb3Provider(): Web3ContextType {
     return transactionStates[action] || { isActive: false, stage: 'idle' };
   };
   
-  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const setLoadingState = (action: string, state: boolean) => {
     setActionLoading(prev => ({ ...prev, [action]: state }));
   };
 
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
-  const connectWallet = () => {
-      connect({ connector: metaMask() });
-  };
-
-  const disconnectWallet = () => {
-    disconnect();
-  };
-  
   const [tokenDecimals, setTokenDecimals] = useState(8);
 
   useEffect(() => {
@@ -199,7 +205,6 @@ export function useWeb3Provider(): Web3ContextType {
     }
   }, [wagmiConfig, isConnected]);
 
-
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
   const clearTransactionStatus = () => {
@@ -213,7 +218,6 @@ export function useWeb3Provider(): Web3ContextType {
     await refetchTokenBalance();
     return freshGameData;
   }, [getAIData, refetchTokenBalance, isDataFetching, gameData, isConnected, address]);
-
 
   const handleTransaction = async (
     action: string, 
@@ -258,20 +262,19 @@ export function useWeb3Provider(): Web3ContextType {
         
         if (e instanceof BaseError) {
           const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
+          const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+          const txError = e.walk((err) => err instanceof TransactionExecutionError);
+
           if (userRejectedError) {
             reason = "User rejected the request";
+          } else if (revertError instanceof ContractFunctionRevertedError) {
+             reason = revertError.reason ?? "An unknown contract error occurred.";
+          } else if (txError instanceof TransactionExecutionError) {
+             // This is where "out of gas" and other execution errors are caught.
+             // We access `cause` to get the real underlying error.
+             reason = txError.cause?.message || txError.shortMessage || "Transaction execution error.";
           } else {
-            const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
-            if (revertError instanceof ContractFunctionRevertedError) {
-               reason = revertError.reason ?? "An unknown contract error occurred.";
-            } else {
-               const txError = e.walk((err) => err instanceof TransactionExecutionError);
-               if (txError instanceof TransactionExecutionError) {
-                   reason = txError.cause?.message || "An unknown transaction error occurred.";
-               } else {
-                   reason = e.shortMessage;
-               }
-            }
+             reason = e.shortMessage;
           }
         }
         
@@ -375,9 +378,9 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ variant: "destructive", title: "Error", description: "Game data not loaded." });
       return;
     }
-    if (gameData.playerBalance < gameData.minBet) {
-      toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData.minBet} to play.` });
-      return;
+     if (gameData.playerBalance < gameData.minBet) {
+       toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData.minBet} to play.` });
+       return;
     }
 
     try {

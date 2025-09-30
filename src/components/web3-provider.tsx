@@ -34,6 +34,8 @@ const config = createConfig({
   transports: {
     [selectedChain.id]: http(),
   },
+  // This helps with ensuring consistent disconnect/reconnect behavior
+  reconnectOnMount: true, 
 });
 
 const Web3ProviderContent = ({ children }: { children: React.ReactNode }) => {
