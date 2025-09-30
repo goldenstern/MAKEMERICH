@@ -574,7 +574,7 @@ const Dashboard = () => {
       </div>
 
        <div className="text-center pt-8">
-            {isBalanceInsufficient && !isLoading && cooldown === 0 ? (
+            {isBalanceInsufficient && !isLoading ? (
                 <h3 className="text-2xl font-bold font-headline mb-4 text-destructive">
                     You need at least {gameData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
                 </h3>
