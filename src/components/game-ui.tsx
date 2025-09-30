@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -36,6 +35,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const amountSchema = z.object({
   amount: z.coerce.number().positive({ message: "Amount must be positive." }).min(0.00001),
@@ -45,6 +45,7 @@ type AmountFormValues = z.infer<typeof amountSchema>;
 
 const REFRESH_INTERVAL = 30; // in seconds
 const DONT_REMIND_STORAGE_KEY = "mmr-dont-remind-again";
+const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 // A component for the confetti effect
 const Confetti = ({ onComplete }: { onComplete: () => void }) => {
@@ -200,7 +201,7 @@ const RefreshTimer = () => {
             timer = setInterval(() => {
                 setCountdown(prev => {
                     if (prev <= 1) {
-                        refreshData();
+                        setTimeout(() => refreshData(), 0);
                         return REFRESH_INTERVAL;
                     }
                     return prev - 1;
@@ -333,7 +334,7 @@ const ConnectWalletView = () => {
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich, AI</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, trust your funds to Crowd Wisdom AI algorithm so double it or loose.<br></br><br></br>Connect your Web3 wallet to start playing. The dApp where you can multiply your tokens or lose them all. High risk, high reward!</p>
+      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode, stake your funds into Crowd Wisdom AI algorithmic pool to double it or loose.</p>
       <Button size="lg" onClick={connectWallet} disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Connect Wallet
@@ -573,12 +574,12 @@ const Dashboard = () => {
       </div>
 
        <div className="text-center pt-8">
-            {isBalanceInsufficient && !isLoading && cooldown === 0 ? (
+            {isBalanceInsufficient && !isLoading ? (
                 <h3 className="text-2xl font-bold font-headline mb-4 text-destructive">
                     You need at least {gameData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
                 </h3>
             ) : (
-                <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
+                <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk it all?</h3>
             )}
             <div className="flex flex-col sm:flex-row justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
@@ -619,6 +620,7 @@ const Dashboard = () => {
 
 export default function GameUI() {
   const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, gameData } = useWeb3();
+  const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
   const [showTears, setShowTears] = React.useState(false);
@@ -627,40 +629,45 @@ export default function GameUI() {
     setIsClient(true);
   }, []);
 
-  const prevPlayerBalance = React.useRef<number | undefined>();
-  const isCheckingWin = React.useRef(false);
+  const hasCheckedWin = React.useRef(false);
 
   React.useEffect(() => {
-    if (transactionStatus.action === 'makeMeRich' && transactionStatus.status === 'confirmed') {
-      isCheckingWin.current = true;
-      // We don't check for win here, we wait for the data to be fetched
-    }
-  }, [transactionStatus]);
+    if (
+      transactionStatus.action === 'makeMeRich' &&
+      transactionStatus.status === 'confirmed' &&
+      !isDataFetching &&
+      gameData &&
+      !hasCheckedWin.current
+    ) {
+      hasCheckedWin.current = true;
+      const prevBalanceStr = localStorage.getItem(MMR_PREV_BALANCE_KEY);
 
-  React.useEffect(() => {
-    // This effect runs when gameData changes.
-    if (isCheckingWin.current && !isDataFetching && gameData) {
-      const currentBalance = gameData.playerBalance;
-      const previousBalance = prevPlayerBalance.current;
-      
-      if (previousBalance !== undefined) {
-          if (currentBalance > previousBalance) {
-            setShowConfetti(true);
-          } else if (currentBalance < previousBalance) {
-            setShowTears(true);
-          }
+      if (prevBalanceStr) {
+        const prevBalance = parseFloat(prevBalanceStr);
+        const currentBalance = gameData.playerBalance;
+
+        if (currentBalance > prevBalance) {
+          setShowConfetti(true);
+          toast({ title: "You Won!", description: "Your stake has been doubled." });
+        } else if (currentBalance < prevBalance) {
+          setShowTears(true);
+          toast({ variant: "destructive", title: "You Lost...", description: "Your stake is gone. Better luck next time!" });
+        } else {
+           toast({ title: "Transaction Confirmed", description: "Your balance is unchanged." });
+        }
+        localStorage.removeItem(MMR_PREV_BALANCE_KEY);
       }
       
-      // Reset flags and clear status
-      isCheckingWin.current = false;
       clearTransactionStatus();
     }
-    
-    // Always update the previous balance when gameData is available and not fetching
-    if (gameData && !isDataFetching) {
-      prevPlayerBalance.current = gameData.playerBalance;
-    }
-  }, [gameData, isDataFetching, clearTransactionStatus]);
+  }, [transactionStatus, isDataFetching, gameData, clearTransactionStatus, toast]);
+
+  // Reset the check flag if the transaction is no longer active
+  React.useEffect(() => {
+      if (transactionStatus.status !== 'confirmed') {
+          hasCheckedWin.current = false;
+      }
+  }, [transactionStatus]);
 
 
   return (

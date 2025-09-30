@@ -1,13 +1,13 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useAccountEffect, useConfig } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
-import { parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { gameABI } from '@/lib/abi';
+import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError } from 'viem';
 
 export interface GameData {
   playerBalance: number;
@@ -67,66 +67,26 @@ export const useWeb3 = () => {
 
 const contractAddress = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) || '0x';
 const tokenAddress = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS as `0x${string}`) || '0x';
-
+const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected, isConnecting } = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { writeContractAsync, data: hash, reset } = useWriteContract();
+  const { address, isConnected, isConnecting, chainId } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect, disconnectAsync } = useDisconnect();
+  const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
-  const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
-
-
-  const setTransactionState = (action: string, stage: TransactionStage) => {
-    setTransactionStates(prev => ({
-      ...prev,
-      [action]: {
-        isActive: stage !== 'idle' && stage !== 'done' && stage !== 'error',
-        stage,
-      }
-    }));
-  };
-
-  const getTransactionState = (action: string): TransactionState => {
-    return transactionStates[action] || { isActive: false, stage: 'idle' };
-  };
-  
+  const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
-  const setLoadingState = (action: string, state: boolean) => {
-    setActionLoading(prev => ({ ...prev, [action]: state }));
-  };
-
-  const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
-
-  const connectWallet = () => {
-    connect({ connector: metaMask() });
-  };
-
-  const disconnectWallet = () => {
-      disconnect();
-  };
-
-  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading, isFetching: isTokenBalanceFetching } = useBalance({
-    address,
-    token: tokenAddress,
-    query: {
-        enabled: isConnected && !!address,
-        refetchInterval: 30000,
-    }
-  });
-  
-  const tokenDecimals = 8;
-  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!isConnected || !addressToUse) return null;
+    if (!addressToUse) return null;
+    
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -145,11 +105,18 @@ export function useWeb3Provider(): Web3ContextType {
             account: addressToUse,
         });
 
+        const tokenDecimals = await readContract(wagmiConfig, {
+          abi: gameABI,
+          address: contractAddress,
+          functionName: 'tokenDecimals',
+        });
+
+
         const data: GameData = {
-            playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
-            totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
+            playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals as number)),
+            totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals as number)),
             numberOfPlayers: Number((gameDataResult as any)[2]),
-            minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
+            minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals as number)),
             riskCoefficient: 100 - Number((gameDataResult as any)[4]),
             feePercent: feePercentResult ? Number(feePercentResult) : 3,
             nextAvailableTime: Number((gameDataResult as any)[6]),
@@ -163,51 +130,103 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [isConnected, address, wagmiConfig]);
+  }, [address, wagmiConfig]);
+  
+  const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
+    address,
+    token: tokenAddress,
+    query: {
+        enabled: isConnected && !!address,
+        refetchInterval: 30000,
+    }
+  });
+
+  useEffect(() => {
+    if (isConnected && address) {
+      getAIData(address);
+      refetchTokenBalance();
+    } else {
+      // Clear data when disconnected
+      setGameData(null);
+    }
+  }, [isConnected, address, getAIData, refetchTokenBalance]);
+  
+  const connectWallet = useCallback(() => {
+    const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
+    connect({ connector: metaMaskConnector ?? connectors[0] });
+  }, [connect, connectors]);
+
+  const disconnectWallet = useCallback(async () => {
+    // Forcefully clear all application state immediately
+    setGameData(null);
+    // Then, tell wagmi to disconnect
+    await disconnectAsync();
+    toast({ title: "Wallet Disconnected" });
+  }, [disconnectAsync, toast]);
 
 
-    useAccountEffect({
-        onConnect: (data) => {
-            toast({
-                title: "Wallet Connected",
-                description: `Welcome, ${data.address}`,
+  const setTransactionState = (action: string, stage: TransactionStage) => {
+    setTransactionStates(prev => ({
+      ...prev,
+      [action]: {
+        isActive: stage !== 'idle' && stage !== 'done' && stage !== 'error',
+        stage,
+      }
+    }));
+  };
+
+  const getTransactionState = (action: string): TransactionState => {
+    return transactionStates[action] || { isActive: false, stage: 'idle' };
+  };
+  
+  const setLoadingState = (action: string, state: boolean) => {
+    setActionLoading(prev => ({ ...prev, [action]: state }));
+  };
+
+  const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
+
+  const [tokenDecimals, setTokenDecimals] = useState(8);
+
+  useEffect(() => {
+    const fetchDecimals = async () => {
+        try {
+            const decimals = await readContract(wagmiConfig, {
+                abi: gameABI,
+                address: contractAddress,
+                functionName: 'tokenDecimals',
             });
-            getAIData(data.address);
-            refetchTokenBalance();
-        },
-        onDisconnect: () => {
-            toast({
-                title: "Wallet Disconnected",
-            });
-            setGameData(null);
-        },
-    });
-
-    useEffect(() => {
-        if(isConnected && address) {
-            getAIData();
-            const interval = setInterval(() => {
-                getAIData();
-                refetchTokenBalance();
-            }, 30000);
-            return () => clearInterval(interval);
+            setTokenDecimals(decimals as number);
+        } catch (error) {
+            console.error("Failed to fetch token decimals", error);
         }
-    }, [isConnected, address, getAIData, refetchTokenBalance]);
+    };
+    if (isConnected) {
+        fetchDecimals();
+    }
+  }, [wagmiConfig, isConnected]);
+
+  const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
   const clearTransactionStatus = () => {
       setTransactionStatus({ action: null, status: null });
-      reset();
   };
 
   const refreshData = useCallback(async (): Promise<GameData | null> => {
     if(isDataFetching) return gameData;
+    if (!isConnected || !address) return null;
     const freshGameData = await getAIData();
     await refetchTokenBalance();
     return freshGameData;
-  }, [getAIData, refetchTokenBalance, isDataFetching, gameData]);
+  }, [getAIData, refetchTokenBalance, isDataFetching, gameData, isConnected, address]);
 
+  const handleTransaction = async (
+    action: string, 
+    functionName: string, 
+    args: any[] = [], 
+    options: { customToastTitle?: string; showSuccessToast?: boolean; gas?: bigint } = {}
+  ) => {
+    const { customToastTitle, showSuccessToast = true, gas } = options;
 
-  const handleTransaction = async (action: string, functionName: string, args: any[] = [], customToastTitle?: string) => {
     if (!isConnected || !address) {
         toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
         return;
@@ -220,6 +239,7 @@ export function useWeb3Provider(): Web3ContextType {
             functionName,
             args,
             account: address,
+            gas,
         });
       setTransactionState(action, 'processing');
       toast({ title: customToastTitle || "Transaction Sent", description: "Waiting for confirmation..." });
@@ -230,29 +250,49 @@ export function useWeb3Provider(): Web3ContextType {
           throw new Error("Transaction failed.");
       }
 
-      toast({ title: "Success", description: "Transaction confirmed." });
+      if (showSuccessToast) {
+        toast({ title: "Success", description: "Transaction confirmed." });
+      }
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
       await refreshData();
 
     } catch (e: any) {
-        console.error(e);
-        const errorMessage = e.shortMessage || e.message;
-        if (errorMessage.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
-        } else {
-            toast({ variant: "destructive", title: "Transaction Error", description: errorMessage });
+        let reason = "An unknown error occurred.";
+        
+        if (e instanceof BaseError) {
+          const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
+          const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+          const txError = e.walk((err) => err instanceof TransactionExecutionError);
+
+          if (userRejectedError) {
+            reason = "User rejected the request";
+          } else if (revertError instanceof ContractFunctionRevertedError) {
+             reason = revertError.reason ?? "An unknown contract error occurred.";
+          } else if (txError instanceof TransactionExecutionError) {
+             // This is where "out of gas" and other execution errors are caught.
+             // We access `cause` to get the real underlying error.
+             reason = txError.cause?.message || txError.shortMessage || "Transaction execution error.";
+          } else {
+             reason = e.shortMessage;
+          }
         }
+        
+        const finalReason = reason.charAt(0).toUpperCase() + reason.slice(1).replace('execution reverted: ', '');
+        toast({ variant: "destructive", title: "Transaction Error", description: finalReason });
+       
         setTransactionState(action, 'error');
-        // Reset state after a short delay to allow user to see the error state
         setTimeout(() => setTransactionState(action, 'idle'), 2000);
-        throw e; // re-throw to be caught by caller
+        throw new Error(reason); 
     }
   };
 
   const deposit = async (amount: number) => {
+    if (!isConnected || !address) {
+      toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
+      return;
+    }
     if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
-    if (!address) return toast({ variant: "destructive", title: "Wallet not connected" });
     
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
@@ -285,16 +325,17 @@ export function useWeb3Provider(): Web3ContextType {
 
         toast({ title: "Approved!", description: "Staking tokens..." });
 
-        await handleTransaction('deposit', 'deposit', [amountInUnits], "Staking...");
+        await handleTransaction('deposit', 'deposit', [amountInUnits], { customToastTitle: "Staking..." });
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        console.error(e);
-        const errorMessage = e.shortMessage || e.message;
-        if (!errorMessage.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Stake Error", description: errorMessage });
-        } else {
-             toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
+        if (!(e instanceof Error && e.message.includes("User rejected the request"))) {
+            if (e instanceof BaseError) {
+                const reason = e.shortMessage || e.message;
+                toast({ variant: "destructive", title: "Deposit Error", description: reason });
+            } else {
+                toast({ variant: "destructive", title: "Deposit Error", description: "An unknown error occurred during deposit." });
+            }
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -313,7 +354,6 @@ export function useWeb3Provider(): Web3ContextType {
       const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
       await handleTransaction('withdraw', 'withdraw', [amountInUnits]);
     } catch (error) {
-       // Error is already handled/toasted in handleTransaction
     } finally {
         setLoadingState('withdraw', false);
     }
@@ -328,39 +368,41 @@ export function useWeb3Provider(): Web3ContextType {
     try {
       await handleTransaction('withdrawAll', 'withdrawAll', []);
     } catch (error) {
-       // Error is already handled/toasted in handleTransaction
     } finally {
       setLoadingState('withdrawAll', false);
     }
   };
 
   const makeMeRich = async () => {
-    const freshGameData = await refreshData();
-
-    if (!freshGameData) {
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch latest game data."});
-        return;
+    if (!gameData) {
+      toast({ variant: "destructive", title: "Error", description: "Game data not loaded." });
+      return;
+    }
+     if (gameData.playerBalance < gameData.minBet) {
+       toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${gameData.minBet} to play.` });
+       return;
     }
 
-    if (freshGameData.playerBalance < freshGameData.minBet) {
-        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${freshGameData?.minBet} to play.`});
-        return;
-    }
-    if (freshGameData.nextAvailableTime && (freshGameData.nextAvailableTime - Math.floor(Date.now() / 1000)) > 0) {
-        toast({ variant: "destructive", title: "Cooldown", description: `Please wait for the cooldown to finish.`});
-        return;
-    }
     try {
-      await handleTransaction('makeMeRich', 'makeMeRich', []);
+      localStorage.setItem(MMR_PREV_BALANCE_KEY, gameData.playerBalance.toString());
+      await handleTransaction(
+        'makeMeRich', 
+        'makeMeRich', 
+        [], 
+        { 
+          showSuccessToast: false,
+          gas: 250000n,
+        }
+      );
     } catch (error) {
-      // Error is already handled/toasted in handleTransaction
+      localStorage.removeItem(MMR_PREV_BALANCE_KEY);
     }
   };
 
-  const isLoading = isConnecting || (isConnected && isTokenBalanceLoading && !gameData);
+  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !gameData));
 
   return {
-    isConnected,
+    isConnected: isConnected,
     address,
     formattedAddress,
     tokenBalance,
