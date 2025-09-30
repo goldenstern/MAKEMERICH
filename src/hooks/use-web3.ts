@@ -1,4 +1,5 @@
 
+
       
 "use client";
 
@@ -148,16 +149,12 @@ export function useWeb3Provider(): Web3ContextType {
     // If a disconnect action was just triggered, ignore wagmi's state
     // until the disconnect process is fully complete (isDisconnecting.current is false).
     if (isDisconnecting.current) {
-        if (!wagmiIsConnected) {
-            // Once wagmi confirms disconnection, reset the flag.
-            isDisconnecting.current = false;
-        }
-        return; // Don't process any connection changes while disconnecting.
+        return; 
     }
     
     // Handle connection
     if (wagmiIsConnected && address) {
-        if (!isConnected) { // Prevents re-fetching data on every render if already connected
+        if (!isConnected) { 
             setIsConnected(true);
             toast({ title: "Wallet Connected" });
             getAIData(address);
@@ -201,11 +198,12 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const disconnectWallet = () => {
-    isDisconnecting.current = true; // Set the flag to indicate a disconnect is in progress
-    setIsConnected(false); // Immediately update the app's state
-    setGameData(null); // Immediately clear game data
-    disconnect(); // Trigger the async disconnect in wagmi
+    isDisconnecting.current = true;
+    setIsConnected(false); 
+    setGameData(null);
+    disconnect();
     toast({ title: "Wallet Disconnected" });
+    setTimeout(() => { isDisconnecting.current = false; }, 500);
   };
   
   const [tokenDecimals, setTokenDecimals] = useState(8);
@@ -311,8 +309,11 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const deposit = async (amount: number) => {
+    if (!isConnected || !address) {
+      toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
+      return;
+    }
     if (amount <= 0) return toast({ variant: "destructive", title: "Invalid amount" });
-    if (!address) return toast({ variant: "destructive", title: "Wallet not connected" });
     
     const amountInUnits = parseUnits(amount.toString(), tokenDecimals);
     
