@@ -579,7 +579,7 @@ const Dashboard = () => {
                     You need at least {gameData?.minBet} {tokenSymbol} in your stake to activate MMR AI.
                 </h3>
             ) : (
-                <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk all?</h3>
+                <h3 className="text-2xl font-bold font-headline mb-4">Ready to risk it all?</h3>
             )}
             <div className="flex flex-col sm:flex-row justify-center items-stretch gap-2 max-w-lg mx-auto">
               <Button 
