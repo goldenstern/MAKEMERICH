@@ -520,7 +520,7 @@ const Dashboard = () => {
         <Card className="md:col-span-2 lg:col-span-1 lg:order-1">
             <CardHeader>
                 <CardTitle>Stake</CardTitle>
-                <CardDescription>Manage your staked tokens and wallet balance.</CardDescription>
+                <CardDescription>Manage your staked tokens.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-1">
