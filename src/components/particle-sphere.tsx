@@ -99,15 +99,15 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
     const handleMouseMove = (e: MouseEvent) => {
         const rect = canvas.getBoundingClientRect();
-        mouse.current.x = (e.clientX - rect.left) * dpr;
-        mouse.current.y = (e.clientY - rect.top) * dpr;
+        mouse.current.x = (e.clientX - rect.left);
+        mouse.current.y = (e.clientY - rect.top);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
         if (e.touches.length > 0) {
             const rect = canvas.getBoundingClientRect();
-            mouse.current.x = (e.touches[0].clientX - rect.left) * dpr;
-            mouse.current.y = (e.touches[0].clientY - rect.top) * dpr;
+            mouse.current.x = (e.touches[0].clientX - rect.left);
+            mouse.current.y = (e.touches[0].clientY - rect.top);
         }
     };
 
@@ -146,7 +146,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
         baseRadius = Math.min(width, height) * 0.3;
-        mouse.current.radius = Math.min(width, height) * 0.15 * dpr;
+        mouse.current.radius = Math.min(width, height) * 0.15;
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -199,8 +199,8 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
             if (mouse.current.x !== null && mouse.current.y !== null) {
                 const rotatedForProjection = rotateY(p, rotation);
                 const projTemp = project(rotatedForProjection, width, height, radius);
-                const dx = (projTemp.x * dpr) - mouse.current.x;
-                const dy = (projTemp.y * dpr) - mouse.current.y;
+                const dx = projTemp.x - mouse.current.x;
+                const dy = projTemp.y - mouse.current.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < mouse.current.radius) {
@@ -253,7 +253,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
       // Calculate radii
       const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-      let playerRadius = baseRadius * Math.cbrt(stakeRatio); 
+      let playerRadius = baseRadius * stakeRatio; 
 
       // Handle animations affecting radius
       const { type, progress } = effectState.current;
