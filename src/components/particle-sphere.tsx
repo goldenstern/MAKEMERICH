@@ -286,14 +286,6 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       drawParticles(particles.pool, poolRadius);
       if (playerStake > 0) {
         drawParticles(particles.player, playerRadius);
-
-        ctx.save();
-        ctx.fillStyle = colors.black;
-        ctx.globalAlpha = 1;
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate(rotation);
-        ctx.fillText("✕", 0, 0);
-        ctx.restore();
       }
 
       rotation += 0.002;
