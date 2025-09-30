@@ -30,12 +30,12 @@ const MIN_PLAYER_PARTICLES = 20;
 export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake, lastAction, onAnimationComplete }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [colors, setColors] = useState({ black: '#000000', gold: '#e5c44f' });
-  const effectState = useRef({ type: null as ActionType, progress: 0, duration: 0 });
+  const effectState = useRef<{ type: ActionType, progress: number, duration: number }>({ type: null, progress: 0, duration: 0 });
 
   useEffect(() => {
     const computedStyle = getComputedStyle(document.documentElement);
-    const black = computedStyle.getPropertyValue('--foreground').trim();
-    const gold = computedStyle.getPropertyValue('--primary').trim();
+    const black = `hsl(${computedStyle.getPropertyValue('--foreground').trim()})`;
+    const gold = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
     setColors({ black, gold });
   }, []);
 
