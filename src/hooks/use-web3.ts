@@ -85,7 +85,8 @@ export function useWeb3Provider(): Web3ContextType {
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
-    if (!isConnected || !addressToUse) return null;
+    if (!addressToUse) return null;
+    
     setIsDataFetching(true);
     try {
         const gameDataResult = await readContract(wagmiConfig, {
@@ -104,11 +105,18 @@ export function useWeb3Provider(): Web3ContextType {
             account: addressToUse,
         });
 
+        const tokenDecimals = await readContract(wagmiConfig, {
+          abi: gameABI,
+          address: contractAddress,
+          functionName: 'tokenDecimals',
+        });
+
+
         const data: GameData = {
-            playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals)),
-            totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals)),
+            playerBalance: parseFloat(formatUnits((gameDataResult as any)[0], tokenDecimals as number)),
+            totalPool: parseFloat(formatUnits((gameDataResult as any)[1], tokenDecimals as number)),
             numberOfPlayers: Number((gameDataResult as any)[2]),
-            minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals)),
+            minBet: parseFloat(formatUnits((gameDataResult as any)[3], tokenDecimals as number)),
             riskCoefficient: 100 - Number((gameDataResult as any)[4]),
             feePercent: feePercentResult ? Number(feePercentResult) : 3,
             nextAvailableTime: Number((gameDataResult as any)[6]),
@@ -122,7 +130,7 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig, isConnected]);
+  }, [address, wagmiConfig]);
 
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
@@ -146,8 +154,6 @@ export function useWeb3Provider(): Web3ContextType {
       hasShownConnectToast.current = false;
     }
   }, [isConnected, address, getAIData, refetchTokenBalance, toast]);
-
-
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
     setTransactionStates(prev => ({
@@ -178,12 +184,31 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const disconnectWallet = () => {
+    setGameData(null);
+    hasShownConnectToast.current = false;
     disconnect();
-    setGameData(null); 
     toast({ title: "Wallet Disconnected" });
   };
   
-  const tokenDecimals = 8;
+  const [tokenDecimals, setTokenDecimals] = useState(8);
+
+  useEffect(() => {
+    const fetchDecimals = async () => {
+        try {
+            const decimals = await readContract(wagmiConfig, {
+                abi: gameABI,
+                address: contractAddress,
+                functionName: 'tokenDecimals',
+            });
+            setTokenDecimals(decimals as number);
+        } catch (error) {
+            console.error("Failed to fetch token decimals", error);
+        }
+    };
+    fetchDecimals();
+  }, [wagmiConfig]);
+
+
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
   const clearTransactionStatus = () => {
@@ -235,17 +260,20 @@ export function useWeb3Provider(): Web3ContextType {
         
         if (e instanceof BaseError) {
           const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
-          const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
-          const txError = e.walk((err) => err instanceof TransactionExecutionError);
-
           if (userRejectedError) {
             reason = "User rejected the request";
-          } else if (revertError instanceof ContractFunctionRevertedError) {
-            reason = revertError.reason ?? "An unknown contract error occurred.";
-          } else if (txError instanceof TransactionExecutionError) {
-            reason = txError.cause?.message || "An unknown transaction error occurred.";
           } else {
-            reason = e.shortMessage;
+            const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+            if (revertError instanceof ContractFunctionRevertedError) {
+               reason = revertError.reason ?? "An unknown contract error occurred.";
+            } else {
+               const txError = e.walk((err) => err instanceof TransactionExecutionError);
+               if (txError instanceof TransactionExecutionError) {
+                   reason = txError.cause?.message || "An unknown transaction error occurred.";
+               } else {
+                   reason = e.shortMessage;
+               }
+            }
           }
         }
         
