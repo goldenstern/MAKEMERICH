@@ -72,7 +72,7 @@ const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, isConnected: wagmiIsConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
@@ -81,7 +81,9 @@ export function useWeb3Provider(): Web3ContextType {
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
-  const hasShownConnectToast = useRef(false);
+  
+  const isDisconnecting = useRef(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
@@ -142,18 +144,30 @@ export function useWeb3Provider(): Web3ContextType {
   });
 
   useEffect(() => {
-    if (isConnected && address) {
-      if (!hasShownConnectToast.current) {
-        toast({ title: "Wallet Connected" });
-        hasShownConnectToast.current = true;
-      }
-      getAIData(address);
-      refetchTokenBalance();
-    } else {
-      setGameData(null);
-      hasShownConnectToast.current = false;
+    if (isDisconnecting.current) {
+        // If we are in the process of disconnecting, ignore any updates from wagmi
+        // until the disconnection is complete and the flag is reset.
+        if (!wagmiIsConnected) {
+            isDisconnecting.current = false;
+            setIsConnected(false);
+        }
+        return;
     }
-  }, [isConnected, address, getAIData, refetchTokenBalance, toast]);
+    
+    if (wagmiIsConnected && address) {
+        if (!isConnected) { // Prevents re-fetching data on every render
+            setIsConnected(true);
+            toast({ title: "Wallet Connected" });
+            getAIData(address);
+            refetchTokenBalance();
+        }
+    } else {
+        if (isConnected) { // If app state is connected but wagmi is not
+            setIsConnected(false);
+            setGameData(null);
+        }
+    }
+}, [wagmiIsConnected, address, isConnected, getAIData, refetchTokenBalance, toast]);
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
     setTransactionStates(prev => ({
@@ -178,14 +192,14 @@ export function useWeb3Provider(): Web3ContextType {
   const formattedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
 
   const connectWallet = () => {
-    if (!isConnected) {
+      isDisconnecting.current = false;
       connect({ connector: metaMask() });
-    }
   };
 
   const disconnectWallet = () => {
+    isDisconnecting.current = true;
+    setIsConnected(false);
     setGameData(null);
-    hasShownConnectToast.current = false;
     disconnect();
     toast({ title: "Wallet Disconnected" });
   };
@@ -269,7 +283,7 @@ export function useWeb3Provider(): Web3ContextType {
             } else {
                const txError = e.walk((err) => err instanceof TransactionExecutionError);
                if (txError instanceof TransactionExecutionError) {
-                   reason = txError.cause?.message || "An unknown transaction error occurred.";
+                   reason = txError.cause?.message || txError.shortMessage || "An unknown transaction error occurred.";
                } else {
                    reason = e.shortMessage;
                }
@@ -382,7 +396,7 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (isConnected && isTokenBalanceLoading && !gameData);
+  const isLoading = isConnecting || (wagmiIsConnected && isTokenBalanceLoading && !gameData);
 
   return {
     isConnected: isConnected,
@@ -408,3 +422,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+    
