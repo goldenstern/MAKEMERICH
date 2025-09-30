@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 interface ParticleSphereProps {
   totalPool: number;
@@ -20,6 +20,17 @@ interface Particle {
 
 export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [colors, setColors] = useState({ primary: '#000', foreground: '#fff' });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const computedStyle = getComputedStyle(document.documentElement);
+      setColors({
+        primary: `hsl(${computedStyle.getPropertyValue('--primary').trim()})`,
+        foreground: `hsl(${computedStyle.getPropertyValue('--foreground').trim()})`,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,6 +86,8 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       playerParticles = createParticles(playerParticleCount, playerRadius);
     }
     
+    let animationFrameId: number;
+
     function animate() {
       if (!ctx || !canvas) return;
 
@@ -123,13 +136,13 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         });
       }
 
-      drawParticles(particles, 'hsl(var(--primary))');
+      drawParticles(particles, colors.primary);
       if (playerParticleCount > 0) {
-        drawParticles(playerParticles, 'hsl(var(--accent-foreground))');
+        drawParticles(playerParticles, colors.foreground);
       }
 
       rotation += 0.002;
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     }
 
     const resizeObserver = new ResizeObserver(() => {
@@ -144,10 +157,11 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     animate();
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
     };
 
-  }, [totalPool, playerStake]);
+  }, [totalPool, playerStake, colors]);
 
   return <canvas ref={canvasRef} className="w-full h-full aspect-square" />;
 };
