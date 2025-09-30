@@ -8,7 +8,7 @@ import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { gameABI } from '@/lib/abi';
-import { ContractFunctionRevertedError, UserRejectedRequestError } from 'viem';
+import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError } from 'viem';
 
 export interface GameData {
   playerBalance: number;
@@ -82,11 +82,20 @@ export function useWeb3Provider(): Web3ContextType {
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
-  const hasShownConnectToast = useRef(false);
 
   useEffect(() => {
     setLocalIsConnected(wagmiIsConnected);
+    if (!wagmiIsConnected) {
+        setGameData(null);
+    }
   }, [wagmiIsConnected]);
+
+  useEffect(() => {
+    if (localIsConnected && address) {
+      getAIData(address);
+      refetchTokenBalance();
+    }
+  }, [address, localIsConnected]);
 
 
   const setTransactionState = (action: string, stage: TransactionStage) => {
@@ -121,7 +130,6 @@ export function useWeb3Provider(): Web3ContextType {
     disconnect();
     setGameData(null); 
     setLocalIsConnected(false);
-    hasShownConnectToast.current = false;
     toast({ title: "Wallet Disconnected" });
   };
 
@@ -182,17 +190,11 @@ export function useWeb3Provider(): Web3ContextType {
 
   useEffect(() => {
     if (localIsConnected && address) {
-      if (!hasShownConnectToast.current) {
-          toast({ title: "Wallet Connected" });
-          hasShownConnectToast.current = true;
-      }
-      getAIData(address);
-      refetchTokenBalance();
-    } else {
-      setGameData(null);
-      hasShownConnectToast.current = false;
+        toast({ title: "Wallet Connected" });
+        getAIData(address);
+        refetchTokenBalance();
     }
-  }, [address, localIsConnected, getAIData, refetchTokenBalance, toast]);
+  }, [address, localIsConnected]);
 
 
   const clearTransactionStatus = () => {
@@ -241,27 +243,28 @@ export function useWeb3Provider(): Web3ContextType {
 
     } catch (e: any) {
         let reason = "An unknown error occurred.";
+        
         if (e instanceof BaseError) {
-          const revertError = e.walk(
-            (err) => err instanceof ContractFunctionRevertedError
-          );
           const userRejectedError = e.walk((err) => err instanceof UserRejectedRequestError);
-
-          if (revertError instanceof ContractFunctionRevertedError) {
-            reason = revertError.reason ?? "An unknown contract error occurred.";
-          } else if (userRejectedError instanceof UserRejectedRequestError) {
-              reason = "User rejected the request";
+          if (userRejectedError) {
+            reason = "User rejected the request";
           } else {
-              reason = e.shortMessage.replace('execution reverted: ', '');
+            const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+            if (revertError instanceof ContractFunctionRevertedError) {
+              reason = revertError.reason ?? "An unknown contract error occurred.";
+            } else {
+              const txError = e.walk((err) => err instanceof TransactionExecutionError);
+              if (txError instanceof TransactionExecutionError) {
+                reason = txError.shortMessage;
+              } else {
+                reason = e.shortMessage;
+              }
+            }
           }
         }
         
-        if (reason.includes('User rejected the request')) {
-            toast({ variant: "destructive", title: "Transaction Rejected", description: "You rejected the transaction in your wallet." });
-        } else {
-            const finalReason = reason.charAt(0).toUpperCase() + reason.slice(1);
-            toast({ variant: "destructive", title: "Transaction Error", description: finalReason });
-        }
+        const finalReason = reason.charAt(0).toUpperCase() + reason.slice(1).replace('execution reverted: ', '');
+        toast({ variant: "destructive", title: "Transaction Error", description: finalReason });
        
         setTransactionState(action, 'error');
         setTimeout(() => setTransactionState(action, 'idle'), 2000);
@@ -358,11 +361,9 @@ export function useWeb3Provider(): Web3ContextType {
       return;
     }
     try {
-      // Save balance to local storage before transaction
       localStorage.setItem(MMR_PREV_BALANCE_KEY, gameData.playerBalance.toString());
       await handleTransaction('makeMeRich', 'makeMeRich', [], { showSuccessToast: false });
     } catch (error) {
-      // Clear local storage if transaction fails
       localStorage.removeItem(MMR_PREV_BALANCE_KEY);
     }
   };
