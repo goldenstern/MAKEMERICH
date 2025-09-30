@@ -21,6 +21,9 @@ interface Particle {
   ox: number;
   oy: number;
   oz: number;
+  vx: number;
+  vy: number;
+  vz: number;
   color: string;
 }
 
@@ -31,10 +34,11 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [colors, setColors] = useState({ black: '#000000', gold: '#e5c44f' });
   const effectState = useRef<{ type: ActionType, progress: number, duration: number }>({ type: null, progress: 0, duration: 0 });
+  const mouse = useRef<{ x: number | null, y: number | null, radius: number }>({ x: null, y: null, radius: 100 });
+
 
   useEffect(() => {
     const computedStyle = getComputedStyle(document.documentElement);
-    // Using --foreground and --primary ensures the colors match the theme
     const black = `hsl(${computedStyle.getPropertyValue('--foreground').trim()})`;
     const gold = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
     setColors({ black, gold });
@@ -65,6 +69,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
                 theta: theta, phi: phi,
                 x: x, y: y, z: z,
                 ox: x, oy: y, oz: z,
+                vx: 0, vy: 0, vz: 0,
                 color: color,
             });
         }
@@ -91,6 +96,30 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
+
+    const handleMouseMove = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.current.x = (e.clientX - rect.left) * dpr;
+        mouse.current.y = (e.clientY - rect.top) * dpr;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+        if (e.touches.length > 0) {
+            const rect = canvas.getBoundingClientRect();
+            mouse.current.x = (e.touches[0].clientX - rect.left) * dpr;
+            mouse.current.y = (e.touches[0].clientY - rect.top) * dpr;
+        }
+    };
+
+    const handleMouseOut = () => {
+        mouse.current.x = null;
+        mouse.current.y = null;
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
+    canvas.addEventListener('mouseout', handleMouseOut);
+    canvas.addEventListener('touchend', handleMouseOut);
     
     let rotation = 0;
     
@@ -117,6 +146,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
         baseRadius = Math.min(width, height) * 0.3;
+        mouse.current.radius = Math.min(width, height) * 0.15 * dpr;
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -163,6 +193,50 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       
       const drawParticles = (particleArray: Particle[], radius: number) => {
         particleArray.forEach(p => {
+            let tempP = { ...p };
+
+            // Mouse interaction
+            if (mouse.current.x !== null && mouse.current.y !== null) {
+                const rotatedForProjection = rotateY(p, rotation);
+                const projTemp = project(rotatedForProjection, width, height, radius);
+                const dx = (projTemp.x * dpr) - mouse.current.x;
+                const dy = (projTemp.y * dpr) - mouse.current.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < mouse.current.radius) {
+                    const force = 1 - (dist / mouse.current.radius);
+                    const angle = Math.atan2(dy, dx);
+                    const pushX = Math.cos(angle) * force * 0.2;
+                    const pushY = Math.sin(angle) * force * 0.2;
+                    const pushZ = force * 0.2;
+
+                    tempP.x += pushX;
+                    tempP.y += pushY;
+                    tempP.z += pushZ;
+                }
+            }
+
+             // Apply velocity and dampening to return to original position
+            tempP.vx += (tempP.ox - tempP.x) * 0.05;
+            tempP.vy += (tempP.oy - tempP.y) * 0.05;
+            tempP.vz += (tempP.oz - tempP.z) * 0.05;
+
+            tempP.vx *= 0.95;
+            tempP.vy *= 0.95;
+            tempP.vz *= 0.95;
+
+            tempP.x += tempP.vx;
+            tempP.y += tempP.vy;
+            tempP.z += tempP.vz;
+            
+            // update particle in array
+            p.x = tempP.x;
+            p.y = tempP.y;
+            p.z = tempP.z;
+            p.vx = tempP.vx;
+            p.vy = tempP.vy;
+            p.vz = tempP.vz;
+
             let rotated = rotateY(p, rotation);
             const proj = project(rotated, width, height, radius);
             
@@ -179,7 +253,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
       // Calculate radii
       const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-      let playerRadius = baseRadius * Math.cbrt(stakeRatio); // Use cube root for volume perception
+      let playerRadius = baseRadius * Math.cbrt(stakeRatio); 
 
       // Handle animations affecting radius
       const { type, progress } = effectState.current;
@@ -189,7 +263,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       if (type === 'deposit') {
           poolRadius = baseRadius * (1 - 0.2 * Math.sin(p_progress * Math.PI));
       }
-      if (type === 'withdraw' && playerStake > 0) { // Check stake to avoid animation on withdraw all
+      if (type === 'withdraw' && playerStake > 0) {
           playerRadius = playerRadius * (1 + p_progress * 2);
       }
       if (type === 'win') {
@@ -213,6 +287,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         if (!canvas) return;
         width = canvas.offsetWidth;
         height = canvas.offsetHeight;
+        dpr = window.devicePixelRatio || 1;
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
@@ -224,6 +299,12 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     return () => {
       cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
+       if (canvas) {
+        canvas.removeEventListener('mousemove', handleMouseMove);
+        canvas.removeEventListener('touchmove', handleTouchMove);
+        canvas.removeEventListener('mouseout', handleMouseOut);
+        canvas.removeEventListener('touchend', handleMouseOut);
+      }
     };
 
   }, [particles, colors, onAnimationComplete, playerStake, totalPool]);
