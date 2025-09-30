@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
 export type ActionType = 'deposit' | 'withdraw' | 'win' | 'lose' | null;
 
@@ -10,6 +11,7 @@ interface ParticleSphereProps {
   lastAction: ActionType;
   onAnimationComplete: () => void;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 interface Particle {
@@ -30,7 +32,7 @@ interface Particle {
 const POOL_PARTICLES = 1500;
 const PLAYER_PARTICLES = 500;
 
-export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake, lastAction, onAnimationComplete, onClick }) => {
+export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playerStake, lastAction, onAnimationComplete, onClick, disabled = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [colors, setColors] = useState({ black: '#000000', gold: '#e5c44f' });
   const effectState = useRef<{ type: ActionType, progress: number, duration: number }>({ type: null, progress: 0, duration: 0 });
@@ -96,6 +98,10 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
+    ctx.font = `bold ${Math.min(width, height) * 0.1}px "Space Grotesk"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
 
     const handleMouseMove = (e: MouseEvent) => {
         const rect = canvas.getBoundingClientRect();
@@ -147,6 +153,9 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         ctx.scale(dpr, dpr);
         baseRadius = Math.min(width, height) * 0.3;
         mouse.current.radius = Math.min(width, height) * 0.15;
+        ctx.font = `bold ${Math.min(width, height) * 0.1}px "Space Grotesk"`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -253,7 +262,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
       // Calculate radii
       const stakeRatio = totalPool > 0 ? playerStake / totalPool : 0;
-      let playerRadius = baseRadius * stakeRatio; 
+      let playerRadius = baseRadius * stakeRatio;
 
       // Handle animations affecting radius
       const { type, progress } = effectState.current;
@@ -308,6 +317,12 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
     };
 
   }, [particles, colors, onAnimationComplete, playerStake, totalPool]);
+  
+  const handleCanvasClick = () => {
+    if (!disabled && onClick) {
+      onClick();
+    }
+  };
 
-  return <canvas ref={canvasRef} onClick={onClick} className="w-full h-full aspect-square cursor-pointer" />;
+  return <canvas ref={canvasRef} onClick={handleCanvasClick} className={cn("w-full h-full aspect-square", !disabled && "cursor-pointer")} />;
 };
