@@ -23,7 +23,6 @@ interface Particle {
   color: string;
 }
 
-const LOGO = '⨻';
 const POOL_PARTICLES = 1500;
 const PLAYER_PARTICLES = 500;
 
@@ -201,20 +200,6 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
       if (playerStake > 0) {
         drawParticles(particles.player, playerRadius);
       }
-
-
-      // Draw and rotate the logo
-      ctx.globalAlpha = 1;
-      ctx.save();
-      ctx.translate(width / 2, height / 2);
-      ctx.rotate(rotation * 2);
-      ctx.fillStyle = colors.gold;
-      ctx.font = `${baseRadius * 0.5}px "Space Grotesk"`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(LOGO, 0, 0);
-      ctx.restore();
-
 
       rotation += 0.002;
       animationFrameId = requestAnimationFrame(animate);
