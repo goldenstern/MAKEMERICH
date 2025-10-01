@@ -31,6 +31,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -210,7 +212,7 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
             A quick guide to doubling your stake or losing it all with the power of Crowd Wisdom AI.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] pr-6">
+        <ScrollArea className="max-h-[60vh] pr-6">
           <div className="space-y-6 py-4">
             <div className="space-y-4">
               <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready to Play 🚀</h2>
@@ -249,6 +251,13 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
             </div>
           </div>
         </ScrollArea>
+        <DialogFooter className="pt-4">
+          <DialogClose asChild>
+            <Button type="button" className="w-full">
+              Continue
+            </Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
