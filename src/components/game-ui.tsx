@@ -207,7 +207,7 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>How to Play MakeMeRich, AI</DialogTitle>
+          <DialogTitle>How to use MakeMeRich, AI</DialogTitle>
           <DialogDescription>
             A quick guide to doubling your stake or losing it all with the power of Crowd Wisdom AI.
           </DialogDescription>
