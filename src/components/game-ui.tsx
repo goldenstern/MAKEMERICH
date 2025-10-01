@@ -215,7 +215,7 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
         <ScrollArea className="max-h-[60vh] pr-6">
           <div className="space-y-6 py-4">
             <div className="space-y-4">
-              <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready to Play 🚀</h2>
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready for MMR AI 🚀</h2>
               <InfoCard 
                 icon={Wallet} 
                 title="1. Connect Wallet & Get Tokens"
@@ -246,7 +246,7 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
               <InfoCard 
                 icon={Users2} 
                 title="Grow the Pool"
-                description="Click 'Farm Attention' to share the game. More participants mean a larger total pool, which benefits everyone in the system."
+                description="Click 'Farm Attention' to share the AI pool. More participants mean a larger total pool, which benefits everyone in the system and lowers the risks."
               />
             </div>
           </div>
@@ -417,7 +417,11 @@ const ConnectWalletView = () => {
             How It Works
          </Button>
          <Button size="lg" onClick={connectWallet} disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Wallet className="mr-2 h-4 w-4" />
+          )}
           Connect Wallet
         </Button>
       </div>
