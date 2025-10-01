@@ -44,6 +44,9 @@ export interface Web3ContextType {
   actionLoading: Record<string, boolean>;
   transactionStatus: TransactionStatus;
   lastAction: ActionType;
+  isTutorialOpen: boolean;
+  setIsTutorialOpen: (open: boolean) => void;
+  openTutorial: () => void;
   connectWallet: () => void;
   disconnectWallet: () => void;
   deposit: (amount: number) => Promise<void>;
@@ -87,6 +90,7 @@ export function useWeb3Provider(): Web3ContextType {
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [lastAction, setLastAction] = useState<ActionType>(null);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
@@ -219,6 +223,10 @@ export function useWeb3Provider(): Web3ContextType {
   
   const clearLastAction = () => {
     setLastAction(null);
+  };
+  
+  const openTutorial = () => {
+    setIsTutorialOpen(true);
   };
 
   const refreshData = useCallback(async (): Promise<SystemData | null> => {
@@ -424,6 +432,9 @@ export function useWeb3Provider(): Web3ContextType {
     actionLoading,
     transactionStatus,
     lastAction,
+    isTutorialOpen,
+    setIsTutorialOpen,
+    openTutorial,
     connectWallet,
     disconnectWallet,
     deposit,
@@ -439,5 +450,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
-    

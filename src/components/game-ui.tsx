@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ReactMarkdown from 'react-markdown';
-import { ArrowDownRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2 } from "lucide-react";
+import { ArrowDownRight, ArrowRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2, HelpCircle, CircleDollarSign, Bot, Users2 } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -187,6 +187,70 @@ const LitepaperDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: 
   );
 };
 
+const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) => {
+  const InfoCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
+    <div className="flex items-start gap-4">
+      <div className="bg-primary/10 text-primary p-3 rounded-full">
+        <Icon className="h-6 w-6" />
+      </div>
+      <div>
+        <h3 className="font-bold font-headline text-lg mb-1">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>How to Play MakeMeRich, AI</DialogTitle>
+          <DialogDescription>
+            A quick guide to doubling your stake or losing it all with the power of Crowd Wisdom AI.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-6 py-4">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready to Play 🚀</h2>
+            <InfoCard 
+              icon={Wallet} 
+              title="1. Connect Wallet & Get Tokens"
+              description="Click 'Connect Wallet' to link your Web3 wallet. You'll need ANGLS tokens to play."
+            />
+            <InfoCard 
+              icon={CircleDollarSign} 
+              title="2. Stake Your Tokens"
+              description="Enter the amount of ANGLS you want to risk and click 'Stake'. Your tokens are now in the system's pool."
+            />
+          </div>
+
+          <Separator />
+          
+          <div className="space-y-4">
+             <h2 className="text-xl font-bold font-headline text-center text-primary">Risk it All! 🎲</h2>
+             <InfoCard 
+              icon={Bot} 
+              title="Activate the AI"
+              description="Click the big 'MakeMeRich, AI' button to risk your entire stake. The AI algorithm will decide your fate: double your stake or lose it all."
+            />
+          </div>
+
+          <Separator />
+
+           <div className="space-y-4">
+             <h2 className="text-xl font-bold font-headline text-center text-primary">Why Farm Attention? 👥</h2>
+            <InfoCard 
+              icon={Users2} 
+              title="Grow the Pool"
+              description="Click 'Farm Attention' to share the game. More participants mean a larger total pool, which benefits everyone in the system."
+            />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 const RefreshTimer = () => {
     const { isDataFetching, refreshData } = useWeb3();
@@ -327,18 +391,24 @@ const StatCard = ({ icon: Icon, title, value, isLoading, unit }: { icon: React.E
 );
 
 const ConnectWalletView = () => {
-  const { connectWallet, isLoading } = useWeb3();
+  const { connectWallet, isLoading, openTutorial } = useWeb3();
   return (
-    <div className="flex flex-col items-center justify-center text-center h-[calc(100vh-80px)]">
+    <div className="flex flex-col items-center justify-center text-center h-[calc(100vh-80px)] px-4">
       <div className="bg-accent rounded-full p-4 mb-6 flex items-center justify-center w-24 h-24">
         <span className="text-primary text-6xl font-bold">⨻</span>
       </div>
       <h2 className="text-4xl font-bold font-headline mb-2">Welcome to MakeMeRich, AI</h2>
-      <p className="text-muted-foreground mb-6 max-w-md">The apotheosis of clarity in WEB3 vibecode: stake your funds into Crowd Wisdom AI algorithm to double it or loose.</p>
-      <Button size="lg" onClick={connectWallet} disabled={isLoading}>
-        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        Connect Wallet
-      </Button>
+      <p className="text-muted-foreground mb-8 max-w-md">The apotheosis of clarity in WEB3 vibecode: stake your funds into Crowd Wisdom AI algorithm to double it or loose.</p>
+      <div className="flex flex-col gap-4 w-full max-w-xs">
+         <Button variant="outline" onClick={openTutorial}>
+            <HelpCircle className="mr-2 h-4 w-4" />
+            How It Works
+         </Button>
+         <Button size="lg" onClick={connectWallet} disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Connect Wallet
+        </Button>
+      </div>
     </div>
   );
 };
@@ -405,6 +475,9 @@ const Dashboard = () => {
   }, []);
 
   const handleMakeMeRichClick = () => {
+    if (getTransactionState('makeMeRich').isActive || (systemData?.playerBalance ?? 0) < (systemData?.minBet ?? 0) || cooldown > 0) {
+      return;
+    }
     const shouldRemind = !dontRemindAgain && localStorage.getItem(DONT_REMIND_STORAGE_KEY) !== 'true';
     if (shouldRemind) {
       setIsRiskDialogOpen(true);
@@ -632,7 +705,7 @@ const Dashboard = () => {
 };
 
 export default function SystemUI() {
-  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction } = useWeb3();
+  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction, isTutorialOpen, setIsTutorialOpen } = useWeb3();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
@@ -695,6 +768,7 @@ export default function SystemUI() {
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
       )}
+      <TutorialDialog open={isTutorialOpen} onOpenChange={setIsTutorialOpen} />
        {isClient && isDataFetching && (
             <div className="fixed bottom-4 left-4">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
