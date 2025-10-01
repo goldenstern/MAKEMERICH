@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -209,43 +210,45 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
             A quick guide to doubling your stake or losing it all with the power of Crowd Wisdom AI.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready to Play 🚀</h2>
-            <InfoCard 
-              icon={Wallet} 
-              title="1. Connect Wallet & Get Tokens"
-              description="Click 'Connect Wallet' to link your Web3 wallet. You'll need ANGLS tokens to play."
-            />
-            <InfoCard 
-              icon={CircleDollarSign} 
-              title="2. Stake Your Tokens"
-              description="Enter the amount of ANGLS you want to risk and click 'Stake'. Your tokens are now in the system's pool."
-            />
-          </div>
+        <ScrollArea className="max-h-[70vh] pr-6">
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready to Play 🚀</h2>
+              <InfoCard 
+                icon={Wallet} 
+                title="1. Connect Wallet & Get Tokens"
+                description="Click 'Connect Wallet' to link your Web3 wallet. You'll need ANGLS tokens to play."
+              />
+              <InfoCard 
+                icon={CircleDollarSign} 
+                title="2. Stake Your Tokens"
+                description="Enter the amount of ANGLS you want to risk and click 'Stake'. Your tokens are now in the system's pool."
+              />
+            </div>
 
-          <Separator />
-          
-          <div className="space-y-4">
-             <h2 className="text-xl font-bold font-headline text-center text-primary">Risk it All! 🎲</h2>
-             <InfoCard 
-              icon={Bot} 
-              title="Activate the AI"
-              description="Click the big 'MakeMeRich, AI' button to risk your entire stake. The AI algorithm will decide your fate: double your stake or lose it all."
-            />
-          </div>
+            <Separator />
+            
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Risk it All! 🎲</h2>
+              <InfoCard 
+                icon={Bot} 
+                title="Activate the AI"
+                description="Click the big 'MakeMeRich, AI' button to risk your entire stake. The AI algorithm will decide your fate: double your stake or lose it all."
+              />
+            </div>
 
-          <Separator />
+            <Separator />
 
-           <div className="space-y-4">
-             <h2 className="text-xl font-bold font-headline text-center text-primary">Why Farm Attention? 👥</h2>
-            <InfoCard 
-              icon={Users2} 
-              title="Grow the Pool"
-              description="Click 'Farm Attention' to share the game. More participants mean a larger total pool, which benefits everyone in the system."
-            />
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Why Farm Attention? 👥</h2>
+              <InfoCard 
+                icon={Users2} 
+                title="Grow the Pool"
+                description="Click 'Farm Attention' to share the game. More participants mean a larger total pool, which benefits everyone in the system."
+              />
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
