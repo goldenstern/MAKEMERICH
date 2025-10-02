@@ -41,11 +41,8 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
 
   useEffect(() => {
     const computedStyle = getComputedStyle(document.documentElement);
-    // Fallback for scenarios where CSS variables might not be immediately available
-    const foreground = computedStyle.getPropertyValue('--foreground')?.trim();
-    const primary = computedStyle.getPropertyValue('--primary')?.trim();
-    const black = foreground ? `hsl(${foreground})` : '#000000';
-    const gold = primary ? `hsl(${primary})` : '#e5c44f';
+    const black = `hsl(${computedStyle.getPropertyValue('--foreground').trim()})`;
+    const gold = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
     setColors({ black, gold });
   }, []);
 
@@ -291,20 +288,6 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         drawParticles(particles.player, playerRadius);
       }
 
-      // Draw the cross if player has a stake
-      if (playerStake > 0) {
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate(rotation);
-        ctx.font = 'bold 48px "Space Grotesk", sans-serif';
-        ctx.fillStyle = colors.black;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.globalAlpha = 0.8;
-        ctx.fillText('✕', 0, 0);
-        ctx.restore();
-      }
-
       rotation += 0.002;
       animationFrameId = requestAnimationFrame(animate);
     }
@@ -316,9 +299,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({ totalPool, playe
         dpr = window.devicePixelRatio || 1;
         canvas.width = width * dpr;
         canvas.height = height * dpr;
-        if(ctx) {
-            ctx.scale(dpr, dpr);
-        }
+        ctx.scale(dpr, dpr);
     });
     resizeObserver.observe(canvas);
 
