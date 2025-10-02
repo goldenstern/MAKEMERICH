@@ -154,7 +154,7 @@ const LitepaperDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: 
 
   React.useEffect(() => {
     if (open) {
-      fetch('/LitepaperEN.md')
+      fetch('/LitepaperEN_new.md')
         .then(response => response.text())
         .then(text => setMarkdown(text));
     }
