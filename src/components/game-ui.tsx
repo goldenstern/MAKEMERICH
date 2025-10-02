@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -48,7 +47,8 @@ const amountSchema = z.object({
 type AmountFormValues = z.infer<typeof amountSchema>;
 
 const REFRESH_INTERVAL = 30; // in seconds
-const DONT_REMIND_STORAGE_KEY = "mmr-dont-remind-again";
+const DONT_REMIND_RISK_STORAGE_KEY = "mmr-dont-remind-risk-again";
+const DONT_REMIND_STAKE_STORAGE_KEY = "mmr-dont-remind-stake-again";
 const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 // A component for the confetti effect
@@ -455,7 +455,8 @@ const Dashboard = () => {
   const [isStakeWarningOpen, setIsStakeWarningOpen] = React.useState(false);
   const [stakeAmount, setStakeAmount] = React.useState<AmountFormValues | null>(null);
   const [isLitepaperOpen, setIsLitepaperOpen] = React.useState(false);
-  const [dontRemindAgain, setDontRemindAgain] = React.useState(false);
+  const [dontRemindRiskAgain, setDontRemindRiskAgain] = React.useState(false);
+  const [dontRemindStakeAgain, setDontRemindStakeAgain] = React.useState(false);
 
   const amountForm = useForm<AmountFormValues>({ resolver: zodResolver(amountSchema), defaultValues: { amount: 0 } });
   
@@ -492,9 +493,13 @@ const Dashboard = () => {
   }, [cooldown]);
 
   React.useEffect(() => {
-    const savedPreference = localStorage.getItem(DONT_REMIND_STORAGE_KEY);
-    if (savedPreference === 'true') {
-      setDontRemindAgain(true);
+    const riskPreference = localStorage.getItem(DONT_REMIND_RISK_STORAGE_KEY);
+    if (riskPreference === 'true') {
+      setDontRemindRiskAgain(true);
+    }
+    const stakePreference = localStorage.getItem(DONT_REMIND_STAKE_STORAGE_KEY);
+    if (stakePreference === 'true') {
+      setDontRemindStakeAgain(true);
     }
   }, []);
 
@@ -502,7 +507,7 @@ const Dashboard = () => {
     if (getTransactionState('makeMeRich').isActive || (systemData?.playerBalance ?? 0) < (systemData?.minBet ?? 0) || cooldown > 0) {
       return;
     }
-    const shouldRemind = !dontRemindAgain && localStorage.getItem(DONT_REMIND_STORAGE_KEY) !== 'true';
+    const shouldRemind = !dontRemindRiskAgain;
     if (shouldRemind) {
       setIsRiskDialogOpen(true);
     } else {
@@ -511,8 +516,8 @@ const Dashboard = () => {
   };
 
   const handleConfirmRisk = () => {
-    if (dontRemindAgain) {
-      localStorage.setItem(DONT_REMIND_STORAGE_KEY, 'true');
+    if (dontRemindRiskAgain) {
+      localStorage.setItem(DONT_REMIND_RISK_STORAGE_KEY, 'true');
     }
     setIsRiskDialogOpen(false);
     makeMeRich();
@@ -520,11 +525,20 @@ const Dashboard = () => {
 
 
   const handleStakeClick = (data: AmountFormValues) => {
-    setStakeAmount(data);
-    setIsStakeWarningOpen(true);
+    const shouldRemind = !dontRemindStakeAgain;
+    if (shouldRemind) {
+        setStakeAmount(data);
+        setIsStakeWarningOpen(true);
+    } else {
+        deposit(data.amount);
+        amountForm.reset();
+    }
   };
   
   const handleConfirmStake = () => {
+    if (dontRemindStakeAgain) {
+        localStorage.setItem(DONT_REMIND_STAKE_STORAGE_KEY, 'true');
+    }
     if (stakeAmount) {
       deposit(stakeAmount.amount);
       amountForm.reset();
@@ -723,8 +737,8 @@ const Dashboard = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
              <div className="flex items-center space-x-2">
-                <Checkbox id="terms" checked={dontRemindAgain} onCheckedChange={(checked) => setDontRemindAgain(checked as boolean)} />
-                <Label htmlFor="terms" className="text-sm text-muted-foreground">Do not remind me again</Label>
+                <Checkbox id="terms-risk" checked={dontRemindRiskAgain} onCheckedChange={(checked) => setDontRemindRiskAgain(checked as boolean)} />
+                <Label htmlFor="terms-risk" className="text-sm text-muted-foreground">Do not remind me again</Label>
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -745,19 +759,20 @@ const Dashboard = () => {
                         <div className="space-y-2">
                            <p className="font-semibold">Here’s how to proceed safely:</p>
                            <ul className="list-disc list-inside space-y-1">
-                              <li>Risk only funds you are ready to lose — this is alpha testing.</li>
                               <li>Check the approval limits requested by the contract — this corresponds to the amount of your transaction.</li>
                               <li>Use a wallet without assets for testing to eliminate risk.</li>
+                              <li>Risk only funds you are ready to lose — this is alpha testing.</li>
                               <li>To make our contract trusted over time, we need to collectively build trust in the system through verified and safe interactions.</li>
                            </ul>
                         </div>
-                        <p className="text-xs italic text-muted-foreground pt-2">
-                          This warning is standard for new dApps. Always verify the contract address, review approval limits, and proceed cautiously. Over time, with verified code and safe transactions, the contract will gain trust in wallets like MetaMask.
-                        </p>
                       </div>
                     </ScrollArea>
                 </AlertDialogDescription>
               </AlertDialogHeader>
+               <div className="flex items-center space-x-2">
+                <Checkbox id="terms-stake" checked={dontRemindStakeAgain} onCheckedChange={(checked) => setDontRemindStakeAgain(checked as boolean)} />
+                <Label htmlFor="terms-stake" className="text-sm text-muted-foreground">Do not remind me again</Label>
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setStakeAmount(null)}>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleConfirmStake}>Continue</AlertDialogAction>
@@ -842,3 +857,5 @@ export default function SystemUI() {
     </div>
   );
 }
+
+    
