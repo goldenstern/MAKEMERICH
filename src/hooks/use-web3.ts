@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig, useSwitchChain } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { systemABI } from '@/lib/abi';
-import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError } from 'viem';
+import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError, SwitchChainError } from 'viem';
 import { ActionType } from '@/components/particle-sphere';
 
 export interface SystemData {
@@ -84,6 +84,7 @@ export function useWeb3Provider(): Web3ContextType {
   const { disconnectAsync } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
+  const { switchChain, error: switchChainError } = useSwitchChain();
   
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
@@ -165,8 +166,27 @@ export function useWeb3Provider(): Web3ContextType {
   
   const connectWallet = useCallback(() => {
     const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
-    connect({ connector: metaMaskConnector ?? connectors[0] });
-  }, [connect, connectors]);
+    const targetChainId = wagmiConfig.chains[0]?.id;
+
+    if (chainId !== targetChainId) {
+      switchChain({ chainId: targetChainId! }, {
+        onSuccess: () => {
+          connect({ connector: metaMaskConnector ?? connectors[0], chainId: targetChainId });
+        },
+        onError: (error) => {
+            if (error instanceof SwitchChainError && error.code === 4001) {
+                 toast({ variant: "destructive", title: "Network Switch Cancelled", description: "Please switch to the correct network to continue." });
+            } else {
+                toast({ variant: "destructive", title: "Network Error", description: "Could not switch to the correct network. Please do it manually in your wallet." });
+            }
+            // Still try to connect, maybe the wallet will handle it.
+            connect({ connector: metaMaskConnector ?? connectors[0], chainId: targetChainId });
+        }
+      });
+    } else {
+       connect({ connector: metaMaskConnector ?? connectors[0] });
+    }
+  }, [connect, connectors, chainId, wagmiConfig.chains, switchChain, toast]);
 
   const disconnectWallet = useCallback(async () => {
     setIsDisconnecting(true);
@@ -254,6 +274,14 @@ export function useWeb3Provider(): Web3ContextType {
       toast({ variant: "destructive", title: "Error", description: errorMsg });
       throw new Error(errorMsg);
     }
+
+    const targetChainId = wagmiConfig.chains[0]?.id;
+    if (chainId !== targetChainId) {
+        toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${wagmiConfig.chains[0].name} to perform this action.` });
+        switchChain({ chainId: targetChainId! });
+        throw new Error("Wrong network, switch initiated.");
+    }
+
     setTransactionState(action, 'awaiting_confirmation');
     try {
         const txHash = await writeContractAsync({
@@ -325,6 +353,13 @@ export function useWeb3Provider(): Web3ContextType {
     setTransactionState('deposit', 'awaiting_confirmation');
 
     try {
+        const targetChainId = wagmiConfig.chains[0]?.id;
+        if (chainId !== targetChainId) {
+            toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${wagmiConfig.chains[0].name} to stake.` });
+            switchChain({ chainId: targetChainId! });
+            throw new Error("Wrong network, switch initiated.");
+        }
+
         toast({ title: "Approving...", description: "Please confirm the transaction in your wallet." });
 
         const approveTxHash = await writeContractAsync({
@@ -360,7 +395,7 @@ export function useWeb3Provider(): Web3ContextType {
           toast({ variant: "destructive", title: "Cancelled", description: "Transaction was cancelled." });
         } else if (!(e instanceof Error && e.message.startsWith('Transaction failed'))) {
            // Показываем ошибку, только если она не из handleTransaction
-           if (!e.message?.includes('User rejected the request')) {
+           if (!e.message?.includes('User rejected the request') && !e.message.includes('Wrong network')) {
             toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
            }
         }

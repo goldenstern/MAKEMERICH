@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
-import { defineChain } from 'viem';
+import { bsc } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Web3Context, useWeb3Provider } from "@/hooks/use-web3";
 import { metaMask } from '@wagmi/connectors';
@@ -11,28 +10,18 @@ import { metaMask } from '@wagmi/connectors';
 // Create a client
 const queryClient = new QueryClient();
 
-// Получаем переменные окружения
-const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111', 10);
-const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.sepolia.org';
-
-// Определяем кастомную сеть, если она не является стандартной
-const customChain = defineChain({
-  id: chainId,
-  name: 'Custom Network',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: {
-    default: { http: [rpcUrl] },
-  },
-});
-
-// Выбираем сеть
-const selectedChain = chainId === mainnet.id ? mainnet : chainId === sepolia.id ? sepolia : customChain;
-
 const config = createConfig({
-  chains: [selectedChain],
-  connectors: [metaMask()],
+  chains: [bsc],
+  connectors: [
+    metaMask({
+      dappMetadata: {
+        name: 'MakeMeRich, AI',
+        url: 'https://mmr.angl.money',
+      },
+    }),
+  ],
   transports: {
-    [selectedChain.id]: http(),
+    [bsc.id]: http(),
   },
   // This helps with ensuring consistent disconnect/reconnect behavior
   reconnectOnMount: true, 
