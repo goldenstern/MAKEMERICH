@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -312,7 +311,7 @@ const RefreshTimer = () => {
 
 
 const Header = () => {
-  const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading } = useWeb3();
+  const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading, isDisconnecting } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -333,8 +332,8 @@ const Header = () => {
               <div className="text-sm text-muted-foreground">
                 {formattedAddress}
               </div>
-              <Button variant="outline" size="icon" onClick={disconnectWallet}>
-                <LogOut className="h-4 w-4" />
+              <Button variant="outline" size="icon" onClick={disconnectWallet} disabled={isDisconnecting}>
+                {isDisconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
               </Button>
             </div>
           ) : isClient ? (
@@ -366,8 +365,8 @@ const Header = () => {
                 <div className="hidden sm:block text-sm text-muted-foreground">
                   {formattedAddress}
                 </div>
-                <Button variant="outline" size="icon" onClick={disconnectWallet} className="hidden sm:inline-flex">
-                  <LogOut className="h-4 w-4" />
+                <Button variant="outline" size="icon" onClick={disconnectWallet} className="hidden sm:inline-flex" disabled={isDisconnecting}>
+                   {isDisconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
                 </Button>
               </>
             ) : isClient ? (
@@ -452,6 +451,8 @@ const Dashboard = () => {
   const config = useConfig();
   const [cooldown, setCooldown] = React.useState(0);
   const [isRiskDialogOpen, setIsRiskDialogOpen] = React.useState(false);
+  const [isStakeWarningOpen, setIsStakeWarningOpen] = React.useState(false);
+  const [stakeAmount, setStakeAmount] = React.useState<AmountFormValues | null>(null);
   const [isLitepaperOpen, setIsLitepaperOpen] = React.useState(false);
   const [dontRemindAgain, setDontRemindAgain] = React.useState(false);
 
@@ -517,9 +518,18 @@ const Dashboard = () => {
   };
 
 
-  const onDeposit = (data: AmountFormValues) => {
-    deposit(data.amount);
-    amountForm.reset();
+  const handleStakeClick = (data: AmountFormValues) => {
+    setStakeAmount(data);
+    setIsStakeWarningOpen(true);
+  };
+  
+  const handleConfirmStake = () => {
+    if (stakeAmount) {
+      deposit(stakeAmount.amount);
+      amountForm.reset();
+    }
+    setIsStakeWarningOpen(false);
+    setStakeAmount(null);
   };
 
   const onWithdraw = (data: AmountFormValues) => {
@@ -631,7 +641,7 @@ const Dashboard = () => {
                     </div>
                 </div>
                  <Form {...amountForm}>
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                    <form onSubmit={amountForm.handleSubmit(handleStakeClick)} className="space-y-4">
                         <FormField
                             control={amountForm.control}
                             name="amount"
@@ -646,7 +656,7 @@ const Dashboard = () => {
                             )}
                         />
                         <div className="flex flex-col sm:flex-row gap-2">
-                            <Button type="button" onClick={amountForm.handleSubmit(onDeposit)} className="w-full" disabled={actionLoading['deposit']}>
+                            <Button type="submit" className="w-full" disabled={actionLoading['deposit']}>
                                {actionLoading['deposit'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                Stake
                            </Button>
@@ -720,6 +730,20 @@ const Dashboard = () => {
               <AlertDialogAction onClick={handleConfirmRisk} className="bg-primary hover:bg-primary/90">I understand the risk</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={isStakeWarningOpen} onOpenChange={setIsStakeWarningOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmation Notice</AlertDialogTitle>
+                <AlertDialogDescription>
+                    As this is a new decentralized application (dApp), your wallet (e.g., MetaMask) may display a standard notification about interacting with a new, unverified contract. This is expected behavior for new platforms. Please proceed with the transaction.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setStakeAmount(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmStake}>Continue</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
         </AlertDialog>
         <LitepaperDialog open={isLitepaperOpen} onOpenChange={setIsLitepaperOpen} />
     </main>
@@ -799,5 +823,3 @@ export default function SystemUI() {
     </div>
   );
 }
-
-    
