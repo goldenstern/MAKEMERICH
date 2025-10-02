@@ -434,11 +434,11 @@ const ConnectWalletView = () => {
       </div>
       <div className="flex items-center justify-center gap-6 mt-6">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Image src="/metamask.svg" alt="MetaMask" width={20} height={20} />
+          <Image src="/MetaMask_Fox.svg.png" alt="MetaMask" width={20} height={20} />
           <span>MetaMask</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Image src="/bsc.svg" alt="BSC" width={20} height={20} />
+          <Image src="/bsc.png" alt="BSC" width={20} height={20} />
           <span>Runs on BSC</span>
         </div>
       </div>
