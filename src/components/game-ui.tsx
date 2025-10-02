@@ -669,6 +669,8 @@ const Dashboard = () => {
                            {actionLoading['withdrawAll'] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                            Withdraw All
                         </Button>
+                        <Separator />
+                        <p className="text-xs text-center text-muted-foreground">A regular {systemData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
                     </form>
                 </Form>
             </CardContent>
@@ -821,5 +823,3 @@ export default function SystemUI() {
     </div>
   );
 }
-
-    
