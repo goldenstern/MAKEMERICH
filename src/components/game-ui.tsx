@@ -2,11 +2,12 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ReactMarkdown from 'react-markdown';
-import { ArrowDownRight, ArrowRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2, HelpCircle, CircleDollarSign, Bot, Users2, BrainCircuit } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2, HelpCircle, CircleDollarSign, Bot, Users2, BrainCircuit } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -431,9 +432,32 @@ const ConnectWalletView = () => {
           Connect Wallet
         </Button>
       </div>
+      <div className="flex items-center justify-center gap-6 mt-6">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Image src="/MetaMask_Fox.svg.png" alt="MetaMask" width={20} height={20} />
+          <span>MetaMask</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Image src="/bsc.png" alt="BSC" width={20} height={20} />
+          <span>Runs on BSC</span>
+        </div>
+      </div>
     </div>
   );
 };
+
+const WrongNetworkView = () => {
+  return (
+    <div className="flex flex-col items-center justify-center text-center h-[calc(100vh-80px)] px-4">
+      <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
+      <h2 className="text-2xl font-bold font-headline mb-2">Wrong Network</h2>
+      <p className="text-muted-foreground max-w-md">
+        This application only works on the Binance Smart Chain (BSC) network. Please switch to the BSC network in your wallet to continue.
+      </p>
+    </div>
+  );
+};
+
 
 const formatCountdown = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
@@ -785,7 +809,7 @@ const Dashboard = () => {
 };
 
 export default function SystemUI() {
-  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction, isTutorialOpen, setIsTutorialOpen } = useWeb3();
+  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction, isTutorialOpen, setIsTutorialOpen, isWrongNetwork } = useWeb3();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
@@ -837,6 +861,16 @@ export default function SystemUI() {
       }
   }, [transactionStatus]);
 
+  const renderContent = () => {
+    if (!isConnected) {
+      return <ConnectWalletView />;
+    }
+    if (isWrongNetwork) {
+      return <WrongNetworkView />;
+    }
+    return <Dashboard />;
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -844,7 +878,7 @@ export default function SystemUI() {
       {showTears && <Tears onComplete={() => setShowTears(false)} />}
       <Header />
       {isClient ? (
-        isConnected ? <Dashboard /> : <ConnectWalletView />
+        renderContent()
       ) : (
         <div className="p-8"><Skeleton className="h-[400px] w-full" /></div>
       )}
@@ -857,5 +891,3 @@ export default function SystemUI() {
     </div>
   );
 }
-
-    
