@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -6,7 +7,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ReactMarkdown from 'react-markdown';
-import { ArrowDownRight, ArrowRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2, HelpCircle, CircleDollarSign, Bot, Users2 } from "lucide-react";
+import { ArrowDownRight, ArrowRight, Link, Loader2, LogOut, PiggyBank, RefreshCw, Scaling, Users, Wallet, Share2, HelpCircle, CircleDollarSign, Bot, Users2, BrainCircuit } from "lucide-react";
 import { useWeb3 } from "@/hooks/use-web3";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -207,46 +208,51 @@ const TutorialDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>How to use MakeMeRich, AI</DialogTitle>
+          <DialogTitle>MakeMeRich, AI: A Crowd Wisdom Experiment</DialogTitle>
           <DialogDescription>
-            A quick guide to doubling your stake or losing it all with the power of Crowd Wisdom AI.
+            An exploration into collective intelligence and decentralized financial systems.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-6">
           <div className="space-y-6 py-4">
             <div className="space-y-4">
-              <h2 className="text-xl font-bold font-headline text-center text-primary">Get Ready for MMR AI 🚀</h2>
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Step 1: Making Your Contribution</h2>
               <InfoCard 
                 icon={Wallet} 
-                title="1. Connect Wallet & Get Tokens"
-                description="Click 'Connect Wallet' to link your Web3 wallet. You'll need ANGLS tokens to play."
+                title="Connect & Acquire ANGLS"
+                description="Link your Web3 wallet to participate. You will need ANGLS tokens to make a contribution to the system's shared pool."
               />
               <InfoCard 
                 icon={CircleDollarSign} 
-                title="2. Stake Your Tokens"
-                description="Enter the amount of ANGLS you want to risk and click 'Stake'. Your tokens are now in the system's pool."
+                title="Stake Your Contribution"
+                description="Enter the amount of ANGLS you wish to contribute and click 'Stake'. Your tokens are now part of the collective intelligence pool."
               />
             </div>
 
             <Separator />
             
             <div className="space-y-4">
-              <h2 className="text-xl font-bold font-headline text-center text-primary">Risk it All! 🎲</h2>
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Step 2: Activating the AI</h2>
+               <InfoCard 
+                icon={BrainCircuit} 
+                title="The Principle of Crowd Wisdom"
+                description="The AI analyzes the collective actions of all participants—the total pool size, number of contributors, and their activity. This data forms the 'Crowd Wisdom'."
+              />
               <InfoCard 
                 icon={Bot} 
-                title="Activate the AI"
-                description="Click the big 'MakeMeRich, AI' button to risk your entire stake. The AI algorithm will decide your fate: double your stake or lose it all."
+                title="Request an Evaluation"
+                description="By clicking 'MakeMeRich, AI', you request the algorithm to evaluate the system's current state. Based on its analysis, it determines an outcome for your contribution, potentially doubling it or absorbing it to stabilize the system."
               />
             </div>
 
             <Separator />
 
             <div className="space-y-4">
-              <h2 className="text-xl font-bold font-headline text-center text-primary">Why Farm Attention? 👥</h2>
+              <h2 className="text-xl font-bold font-headline text-center text-primary">Step 3: Collective Growth</h2>
               <InfoCard 
                 icon={Users2} 
-                title="Grow the Pool"
-                description="Click 'Farm Attention' to share the AI pool. More participants mean a larger total pool, which benefits everyone in the system and lowers the risks."
+                title="Farm Attention to Strengthen the AI"
+                description="Click 'Farm Attention' to invite others. More participants provide the AI with richer data, increasing its analytical accuracy and strengthening the entire system's health. Your contribution to growth benefits all participants."
               />
             </div>
           </div>
@@ -793,3 +799,5 @@ export default function SystemUI() {
     </div>
   );
 }
+
+    
