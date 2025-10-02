@@ -335,6 +335,7 @@ export function useWeb3Provider(): Web3ContextType {
             functionName: 'approve',
             args: [contractAddress, amountInUnits],
             account: address,
+            gas: 250000n,
         });
         
         setTransactionState('deposit', 'processing');
