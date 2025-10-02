@@ -660,7 +660,10 @@ const Dashboard = () => {
                            Withdraw All
                         </Button>
                         <Separator />
-                        <p className="text-xs text-center text-muted-foreground">A regular {systemData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.</p>
+                        <p className="text-xs text-center text-muted-foreground">
+                            A regular {systemData?.feePercent ?? 3}% GSCB service fee applies to all withdrawals.
+                            Please note: as this is a new dApp, wallets like MetaMask may show a standard warning about an unverified contract. This is expected behavior.
+                        </p>
                     </form>
                 </Form>
             </CardContent>
