@@ -350,8 +350,12 @@ export function useWeb3Provider(): Web3ContextType {
         setTransactionState('deposit', 'done');
 
     } catch (e: any) {
-        if (!(e instanceof Error && e.message.includes("User rejected the request"))) {
-            toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
+        // handleTransaction уже показывает toast, поэтому здесь мы просто обрабатываем внутреннее состояние
+        if (e instanceof Error && e.message.includes("User rejected the request")) {
+          toast({ variant: "destructive", title: "Cancelled", description: "Transaction was cancelled." });
+        } else if (!(e instanceof Error && e.message.startsWith('Transaction failed'))) {
+           // Показываем ошибку, только если она не из handleTransaction
+           toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -393,7 +397,6 @@ export function useWeb3Provider(): Web3ContextType {
 
   const makeMeRich = async () => {
     if (!systemData) {
-      toast({ variant: "destructive", title: "Error", description: "System data not loaded." });
       return;
     }
      if (systemData.playerBalance < systemData.minBet) {
