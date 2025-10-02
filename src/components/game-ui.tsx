@@ -312,7 +312,7 @@ const RefreshTimer = () => {
 
 
 const Header = () => {
-  const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading } = useWeb3();
+  const { isConnected, formattedAddress, disconnectWallet, connectWallet, isLoading, isDisconnecting } = useWeb3();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -333,8 +333,8 @@ const Header = () => {
               <div className="text-sm text-muted-foreground">
                 {formattedAddress}
               </div>
-              <Button variant="outline" size="icon" onClick={disconnectWallet}>
-                <LogOut className="h-4 w-4" />
+              <Button variant="outline" size="icon" onClick={disconnectWallet} disabled={isDisconnecting}>
+                {isDisconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
               </Button>
             </div>
           ) : isClient ? (
@@ -366,8 +366,8 @@ const Header = () => {
                 <div className="hidden sm:block text-sm text-muted-foreground">
                   {formattedAddress}
                 </div>
-                <Button variant="outline" size="icon" onClick={disconnectWallet} className="hidden sm:inline-flex">
-                  <LogOut className="h-4 w-4" />
+                <Button variant="outline" size="icon" onClick={disconnectWallet} className="hidden sm:inline-flex" disabled={isDisconnecting}>
+                   {isDisconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
                 </Button>
               </>
             ) : isClient ? (
@@ -799,5 +799,3 @@ export default function SystemUI() {
     </div>
   );
 }
-
-    

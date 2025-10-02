@@ -41,6 +41,7 @@ export interface Web3ContextType {
   systemData: SystemData | null;
   isLoading: boolean;
   isDataFetching: boolean;
+  isDisconnecting: boolean;
   actionLoading: Record<string, boolean>;
   transactionStatus: TransactionStatus;
   lastAction: ActionType;
@@ -80,12 +81,13 @@ export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
   const { address, isConnected, isConnecting, chainId } = useAccount();
   const { connect, connectors } = useConnect();
-  const { disconnect, disconnectAsync } = useDisconnect();
+  const { disconnectAsync } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
   
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [transactionStates, setTransactionStates] = useState<Record<string, TransactionState>>({});
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({ action: null, status: null });
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
@@ -167,11 +169,13 @@ export function useWeb3Provider(): Web3ContextType {
   }, [connect, connectors]);
 
   const disconnectWallet = useCallback(async () => {
+    setIsDisconnecting(true);
     // Forcefully clear all application state immediately
     setSystemData(null);
     // Then, tell wagmi to disconnect
     await disconnectAsync();
     toast({ title: "Wallet Disconnected" });
+    setIsDisconnecting(false);
   }, [disconnectAsync, toast]);
 
 
@@ -355,7 +359,9 @@ export function useWeb3Provider(): Web3ContextType {
           toast({ variant: "destructive", title: "Cancelled", description: "Transaction was cancelled." });
         } else if (!(e instanceof Error && e.message.startsWith('Transaction failed'))) {
            // Показываем ошибку, только если она не из handleTransaction
-           toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
+           if (!e.message?.includes('User rejected the request')) {
+            toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
+           }
         }
         setTransactionState('deposit', 'error');
     } finally {
@@ -396,10 +402,8 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const makeMeRich = async () => {
-    if (!systemData) {
-      return;
-    }
-     if (systemData.playerBalance < systemData.minBet) {
+    if (!systemData) return;
+    if (systemData.playerBalance < systemData.minBet) {
        toast({ variant: "destructive", title: "Not enough funds", description: `You need at least ${systemData.minBet} to play.` });
        return;
     }
@@ -432,6 +436,7 @@ export function useWeb3Provider(): Web3ContextType {
     systemData,
     isLoading,
     isDataFetching,
+    isDisconnecting,
     actionLoading,
     transactionStatus,
     lastAction,
