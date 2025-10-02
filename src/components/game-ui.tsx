@@ -736,7 +736,22 @@ const Dashboard = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirmation Notice</AlertDialogTitle>
                 <AlertDialogDescription>
-                    As this is a new decentralized application (dApp), your wallet (e.g., MetaMask) may display a standard notification about interacting with a new, unverified contract. This is expected behavior for new platforms. Please proceed with the transaction.
+                  <div className="space-y-4 text-sm">
+                    <p>
+                      As this is a new decentralized application (dApp), your wallet (e.g., MetaMask) may display a standard notification about interacting with a new, unverified contract. This is expected behavior for new platforms.
+                    </p>
+                    <div className="space-y-2">
+                       <p className="font-semibold">Here’s how to proceed safely:</p>
+                       <ul className="list-disc list-inside space-y-1">
+                          <li>Check the approval limits requested by the contract — this corresponds to the amount of your transaction.</li>
+                          <li>Use a wallet without assets for testing to eliminate risk.</li>
+                          <li>To make our contract trusted over time, we need to collectively build trust in the system through verified and safe interactions.</li>
+                       </ul>
+                    </div>
+                    <p className="text-xs italic text-muted-foreground pt-2">
+                      This warning is standard for new dApps. Always verify the contract address, review approval limits, and proceed cautiously. Over time, with verified code and safe transactions, the contract will gain trust in wallets like MetaMask.
+                    </p>
+                  </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
