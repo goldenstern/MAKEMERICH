@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -280,7 +281,6 @@ const RefreshTimer = () => {
         if (isDataFetching) {
             setCountdown(REFRESH_INTERVAL);
         } else {
-            setCountdown(REFRESH_INTERVAL);
             timer = setInterval(() => {
                 setCountdown(prev => {
                     if (prev <= 1) {
@@ -410,7 +410,11 @@ const StatCard = ({ icon: Icon, title, value, isLoading, unit }: { icon: React.E
 );
 
 const ConnectWalletView = () => {
-  const { connectWallet, isLoading, openTutorial } = useWeb3();
+  const { connectWallet, isLoading, openTutorial, contractAddress, tokenAddress } = useWeb3();
+  const explorerUrl = 'https://bscscan.com';
+  const tokenExplorerUrl = tokenAddress ? `${explorerUrl}/token/${tokenAddress}` : explorerUrl;
+  const poolExplorerUrl = contractAddress ? `${explorerUrl}/address/${contractAddress}` : explorerUrl;
+  
   return (
     <div className="flex flex-col items-center justify-center text-center h-[calc(100vh-80px)] px-4">
       <div className="bg-accent rounded-full p-4 mb-6 flex items-center justify-center w-24 h-24">
@@ -431,6 +435,14 @@ const ConnectWalletView = () => {
           )}
           Connect Wallet
         </Button>
+        <div className="flex flex-col sm:flex-row gap-2 mt-2">
+             <Button variant="outline" size="sm" className="w-full" asChild>
+                <a href={tokenExplorerUrl} target="_blank" rel="noopener noreferrer">Token Contract</a>
+             </Button>
+             <Button variant="outline" size="sm" className="w-full" asChild>
+                <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool Contract</a>
+             </Button>
+         </div>
       </div>
       <div className="flex items-center justify-center gap-6 mt-6">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -814,7 +826,7 @@ const Dashboard = () => {
 };
 
 export default function SystemUI() {
-  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction, isTutorialOpen, setIsTutorialOpen, isWrongNetwork } = useWeb3();
+  const { isConnected, isDataFetching, transactionStatus, clearTransactionStatus, systemData, setLastAction, isTutorialOpen, setIsTutorialOpen, isWrongNetwork, contractAddress, tokenAddress } = useWeb3();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
   const [showConfetti, setShowConfetti] = React.useState(false);
@@ -898,3 +910,5 @@ export default function SystemUI() {
 }
 
     
+
+      

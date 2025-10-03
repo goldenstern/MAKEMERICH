@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig, useSwitchChain } from 'wagmi';
+import { watchAccount } from 'wagmi/actions';
 import { metaMask } from '@wagmi/connectors';
+import { bsc } from 'wagmi/chains';
 import { parseUnits, formatUnits, BaseError } from 'viem';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
 import { systemABI } from '@/lib/abi';
@@ -34,6 +36,7 @@ interface TransactionStatus {
 
 export interface Web3ContextType {
   isConnected: boolean;
+  isWrongNetwork: boolean;
   address: `0x${string}` | undefined;
   formattedAddress: string | null;
   tokenBalance: string;
@@ -84,7 +87,7 @@ export function useWeb3Provider(): Web3ContextType {
   const { disconnectAsync } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
-  const { switchChain, error: switchChainError } = useSwitchChain();
+  const { switchChain } = useSwitchChain();
   
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
@@ -94,7 +97,9 @@ export function useWeb3Provider(): Web3ContextType {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [lastAction, setLastAction] = useState<ActionType>(null);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-
+  
+  const targetChainId = wagmiConfig.chains[0]?.id;
+  const isWrongNetwork = isConnected && chainId !== targetChainId;
 
   const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
     const addressToUse = currentAddress || address;
@@ -149,50 +154,55 @@ export function useWeb3Provider(): Web3ContextType {
     address,
     token: tokenAddress,
     query: {
-        enabled: isConnected && !!address,
-        refetchInterval: 30000,
+        enabled: isConnected && !!address && !isWrongNetwork,
     }
   });
 
-  useEffect(() => {
-    if (isConnected && address) {
-      getAIData(address);
-      refetchTokenBalance();
-    } else {
-      // Clear data when disconnected
-      setSystemData(null);
-    }
-  }, [isConnected, address, getAIData, refetchTokenBalance]);
-  
-  const connectWallet = useCallback(() => {
-    const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
-    const targetChainId = wagmiConfig.chains[0]?.id;
+  const refreshData = useCallback(async (): Promise<SystemData | null> => {
+    if(isDataFetching) return systemData;
+    if (!isConnected || !address || isWrongNetwork) return null;
+    const freshSystemData = await getAIData();
+    await refetchTokenBalance();
+    return freshSystemData;
+  }, [getAIData, refetchTokenBalance, isDataFetching, systemData, isConnected, address, isWrongNetwork]);
 
-    if (chainId !== targetChainId) {
-      switchChain({ chainId: targetChainId! }, {
-        onSuccess: () => {
-          connect({ connector: metaMaskConnector ?? connectors[0], chainId: targetChainId });
-        },
-        onError: (error) => {
-            if (error instanceof SwitchChainError && error.code === 4001) {
-                 toast({ variant: "destructive", title: "Network Switch Cancelled", description: "Please switch to the correct network to continue." });
-            } else {
-                toast({ variant: "destructive", title: "Network Error", description: "Could not switch to the correct network. Please do it manually in your wallet." });
-            }
-            // Still try to connect, maybe the wallet will handle it.
-            connect({ connector: metaMaskConnector ?? connectors[0], chainId: targetChainId });
+
+  useEffect(() => {
+    const unwatch = watchAccount(wagmiConfig, {
+      onChange(account) {
+        if (account.isConnected && account.address) {
+          if(account.chainId !== targetChainId) {
+             setSystemData(null);
+          } else {
+             refreshData();
+          }
+        } else {
+          setSystemData(null);
         }
-      });
-    } else {
-       connect({ connector: metaMaskConnector ?? connectors[0] });
+      },
+    });
+
+    return () => unwatch();
+  }, [wagmiConfig, refreshData, targetChainId]);
+
+  
+  const connectWallet = useCallback(async () => {
+    const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
+    try {
+        await connect({ connector: metaMaskConnector ?? connectors[0] });
+    } catch (error) {
+        if (error instanceof UserRejectedRequestError) {
+             toast({ variant: "destructive", title: "Connection Rejected", description: "You rejected the connection request in your wallet." });
+        } else {
+             toast({ variant: "destructive", title: "Connection Failed", description: "Failed to connect to wallet. Please try again." });
+        }
+        console.error("Connection failed", error);
     }
-  }, [connect, connectors, chainId, wagmiConfig.chains, switchChain, toast]);
+  }, [connect, connectors, toast]);
 
   const disconnectWallet = useCallback(async () => {
     setIsDisconnecting(true);
-    // Forcefully clear all application state immediately
     setSystemData(null);
-    // Then, tell wagmi to disconnect
     await disconnectAsync();
     toast({ title: "Wallet Disconnected" });
     setIsDisconnecting(false);
@@ -253,13 +263,6 @@ export function useWeb3Provider(): Web3ContextType {
     setIsTutorialOpen(true);
   };
 
-  const refreshData = useCallback(async (): Promise<SystemData | null> => {
-    if(isDataFetching) return systemData;
-    if (!isConnected || !address) return null;
-    const freshSystemData = await getAIData();
-    await refetchTokenBalance();
-    return freshSystemData;
-  }, [getAIData, refetchTokenBalance, isDataFetching, systemData, isConnected, address]);
 
   const handleTransaction = async (
     action: string, 
@@ -275,10 +278,9 @@ export function useWeb3Provider(): Web3ContextType {
       throw new Error(errorMsg);
     }
 
-    const targetChainId = wagmiConfig.chains[0]?.id;
-    if (chainId !== targetChainId) {
+    if (isWrongNetwork) {
         toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${wagmiConfig.chains[0].name} to perform this action.` });
-        switchChain({ chainId: targetChainId! });
+        if(targetChainId) switchChain({ chainId: targetChainId });
         throw new Error("Wrong network, switch initiated.");
     }
 
@@ -353,10 +355,9 @@ export function useWeb3Provider(): Web3ContextType {
     setTransactionState('deposit', 'awaiting_confirmation');
 
     try {
-        const targetChainId = wagmiConfig.chains[0]?.id;
-        if (chainId !== targetChainId) {
+        if (isWrongNetwork) {
             toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${wagmiConfig.chains[0].name} to stake.` });
-            switchChain({ chainId: targetChainId! });
+            if(targetChainId) switchChain({ chainId: targetChainId });
             throw new Error("Wrong network, switch initiated.");
         }
 
@@ -461,10 +462,11 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !systemData));
+  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !systemData) && !isWrongNetwork);
 
   return {
     isConnected: isConnected,
+    isWrongNetwork,
     address,
     formattedAddress,
     tokenBalance,
@@ -494,3 +496,5 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
+
+      
