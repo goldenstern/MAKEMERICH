@@ -21,7 +21,7 @@ const config = createConfig({
     }),
   ],
   transports: {
-    [bsc.id]: http(),
+    [bsc.id]: http('https://bsc-dataseed.binance.org/'),
   },
   // This helps with ensuring consistent disconnect/reconnect behavior
   reconnectOnMount: true, 
