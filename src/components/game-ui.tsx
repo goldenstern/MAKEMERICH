@@ -284,7 +284,7 @@ const RefreshTimer = () => {
             timer = setInterval(() => {
                 setCountdown(prev => {
                     if (prev <= 1) {
-                        setTimeout(() => refreshData(), 0);
+                        refreshData();
                         return REFRESH_INTERVAL;
                     }
                     return prev - 1;
@@ -648,7 +648,7 @@ const Dashboard = () => {
                             <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                         </Button>
                     </div>
-                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                     <div className="grid grid-cols-2 gap-2 mt-2">
                           <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
                             Litepaper
                          </Button>
@@ -657,6 +657,9 @@ const Dashboard = () => {
                          </Button>
                          <Button variant="outline" size="sm" className="w-full" asChild>
                             <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool 0x...</a>
+                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                           <a href="https://t.me/angl_chat" target="_blank" rel="noopener noreferrer">Telegram Group</a>
                          </Button>
                      </div>
                 </CardContent>
@@ -891,3 +894,5 @@ export default function SystemUI() {
     </div>
   );
 }
+
+    
