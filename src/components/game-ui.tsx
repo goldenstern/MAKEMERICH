@@ -638,17 +638,17 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                     <div className="flex flex-col sm:flex-row gap-2">
-                       <Button variant="default" size="sm" className="w-full" asChild>
-                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
-                       </Button>
                         <Button variant="default" size="sm" className="w-full" asChild>
                             <a href="https://azbit.com/exchange/ANGLS_USDT/" target="_blank" rel="noopener noreferrer">AZbit</a>
                         </Button>
                         <Button variant="default" size="sm" className="w-full" asChild>
                             <a href="https://pancakeswap.finance/swap?inputCurrency=0x31CD5Df78EEe2f105c4717d1b61F5E496D5E377E&outputCurrency=0x55d398326f99059fF775485246999027B3197955&chain=bsc" target="_blank" rel="noopener noreferrer">Pancake</a>
                         </Button>
+                        <Button variant="default" size="sm" className="w-full" asChild>
+                            <a href="https://angl.app/exchange" target="_blank" rel="noopener noreferrer">GSCB</a>
+                       </Button>
                     </div>
-                     <div className="grid grid-cols-2 gap-2 mt-2">
+                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
                           <Button variant="outline" size="sm" className="w-full" onClick={() => setIsLitepaperOpen(true)}>
                             Litepaper
                          </Button>
@@ -658,8 +658,10 @@ const Dashboard = () => {
                          <Button variant="outline" size="sm" className="w-full" asChild>
                             <a href={poolExplorerUrl} target="_blank" rel="noopener noreferrer">Pool 0x...</a>
                          </Button>
+                     </div>
+                     <div className="flex flex-col sm:flex-row gap-2 mt-2">
                          <Button variant="outline" size="sm" className="w-full" asChild>
-                           <a href="https://t.me/angl_chat" target="_blank" rel="noopener noreferrer">Telegram Group</a>
+                            <a href="https://t.me/makemerich_ai" target="_blank" rel="noopener noreferrer">Telegram Group</a>
                          </Button>
                      </div>
                 </CardContent>
