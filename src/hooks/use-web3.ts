@@ -155,7 +155,6 @@ export function useWeb3Provider(): Web3ContextType {
     token: tokenAddress,
     query: {
         enabled: isConnected,
-        refetchInterval: 30000,
     }
   });
 
@@ -318,6 +317,7 @@ export function useWeb3Provider(): Web3ContextType {
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
       await refreshData();
+      await refetchTokenBalance();
 
     } catch (e: any) {
         let reason = "An unknown error occurred.";
