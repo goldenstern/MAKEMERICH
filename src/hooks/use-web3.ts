@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useBalance, useConfig, useSwitchChain } from 'wagmi';
 import { metaMask } from '@wagmi/connectors';
 import { parseUnits, formatUnits, BaseError } from 'viem';
-import { waitForTransactionReceipt, readContract } from 'wagmi/actions'
+import { waitForTransactionReceipt, readContract, watchAccount } from 'wagmi/actions'
 import { systemABI } from '@/lib/abi';
 import { ContractFunctionRevertedError, UserRejectedRequestError, TransactionExecutionError, SwitchChainError } from 'viem';
 import { ActionType } from '@/components/particle-sphere';
@@ -34,6 +34,7 @@ interface TransactionStatus {
 
 export interface Web3ContextType {
   isConnected: boolean;
+  isWrongNetwork: boolean;
   address: `0x${string}` | undefined;
   formattedAddress: string | null;
   tokenBalance: string;
@@ -79,12 +80,12 @@ const MMR_PREV_BALANCE_KEY = "mmr-prev-balance";
 
 export function useWeb3Provider(): Web3ContextType {
   const { toast } = useToast();
-  const { address, isConnected, isConnecting, chainId } = useAccount();
+  const { address, isConnected: wagmiIsConnected, isConnecting, chainId } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnectAsync } = useDisconnect();
   const { writeContractAsync } = useWriteContract();
   const wagmiConfig = useConfig();
-  const { switchChain, error: switchChainError } = useSwitchChain();
+  const { switchChain } = useSwitchChain();
   
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [isDataFetching, setIsDataFetching] = useState(false);
@@ -95,10 +96,14 @@ export function useWeb3Provider(): Web3ContextType {
   const [lastAction, setLastAction] = useState<ActionType>(null);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
+  const targetChain = wagmiConfig.chains[0];
+  const isWrongNetwork = wagmiIsConnected && chainId !== targetChain.id;
+  const isConnected = wagmiIsConnected && !isWrongNetwork;
 
-  const getAIData = useCallback(async (currentAddress?: `0x${string}`) => {
-    const addressToUse = currentAddress || address;
-    if (!addressToUse) return null;
+  const refreshData = useCallback(async (): Promise<SystemData | null> => {
+    if (isDataFetching) return systemData;
+    const currentAddress = wagmiConfig.state.connections.get(wagmiConfig.state.current!)?.accounts[0];
+    if (!currentAddress) return null;
     
     setIsDataFetching(true);
     try {
@@ -107,7 +112,7 @@ export function useWeb3Provider(): Web3ContextType {
             address: contractAddress,
             functionName: 'getAIData',
             args: [],
-            account: addressToUse,
+            account: currentAddress,
         });
 
         const feePercentResult = await readContract(wagmiConfig, {
@@ -115,10 +120,10 @@ export function useWeb3Provider(): Web3ContextType {
             address: contractAddress,
             functionName: 'feePercent',
             args: [],
-            account: addressToUse,
+            account: currentAddress,
         });
 
-        const tokenDecimals = await readContract(wagmiConfig, {
+        const tokenDecimalsResult = await readContract(wagmiConfig, {
           abi: systemABI,
           address: contractAddress,
           functionName: 'tokenDecimals',
@@ -126,10 +131,10 @@ export function useWeb3Provider(): Web3ContextType {
 
 
         const data: SystemData = {
-            playerBalance: parseFloat(formatUnits((systemDataResult as any)[0], tokenDecimals as number)),
-            totalPool: parseFloat(formatUnits((systemDataResult as any)[1], tokenDecimals as number)),
+            playerBalance: parseFloat(formatUnits((systemDataResult as any)[0], tokenDecimalsResult as number)),
+            totalPool: parseFloat(formatUnits((systemDataResult as any)[1], tokenDecimalsResult as number)),
             numberOfPlayers: Number((systemDataResult as any)[2]),
-            minBet: parseFloat(formatUnits((systemDataResult as any)[3], tokenDecimals as number)),
+            minBet: parseFloat(formatUnits((systemDataResult as any)[3], tokenDecimalsResult as number)),
             riskCoefficient: 100 - Number((systemDataResult as any)[4]),
             feePercent: feePercentResult ? Number(feePercentResult) : 3,
             nextAvailableTime: Number((systemDataResult as any)[6]),
@@ -143,56 +148,66 @@ export function useWeb3Provider(): Web3ContextType {
     } finally {
         setIsDataFetching(false);
     }
-  }, [address, wagmiConfig]);
+  }, [isDataFetching, systemData, wagmiConfig]);
   
   const { data: tokenBalanceData, refetch: refetchTokenBalance, isLoading: isTokenBalanceLoading } = useBalance({
     address,
     token: tokenAddress,
     query: {
-        enabled: isConnected && !!address,
-        refetchInterval: 30000,
+        enabled: isConnected,
     }
   });
 
   useEffect(() => {
-    if (isConnected && address) {
-      getAIData(address);
+    const unwatch = watchAccount(wagmiConfig, {
+      onChange(account) {
+        if (account.isConnected && account.chainId === targetChain.id) {
+          refreshData();
+          refetchTokenBalance();
+        } else if (!account.isConnected) {
+          setSystemData(null);
+        }
+      },
+    });
+    return () => unwatch();
+  }, [wagmiConfig, targetChain.id, refreshData, refetchTokenBalance]);
+
+  useEffect(() => {
+    if (isConnected) {
+      refreshData();
       refetchTokenBalance();
     } else {
-      // Clear data when disconnected
       setSystemData(null);
     }
-  }, [isConnected, address, getAIData, refetchTokenBalance]);
+  }, [isConnected, refreshData, refetchTokenBalance]);
   
-  const connectWallet = useCallback(() => {
+  const connectWallet = useCallback(async () => {
     const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
-    const targetChainId = wagmiConfig.chains[0]?.id;
-
-    if (chainId !== targetChainId) {
-      switchChain({ chainId: targetChainId! }, {
-        onSuccess: () => {
-          connect({ connector: metaMaskConnector ?? connectors[0], chainId: targetChainId });
-        },
-        onError: (error) => {
-            if (error instanceof SwitchChainError && error.code === 4001) {
-                 toast({ variant: "destructive", title: "Network Switch Cancelled", description: "Please switch to the correct network to continue." });
-            } else {
-                toast({ variant: "destructive", title: "Network Error", description: "Could not switch to the correct network. Please do it manually in your wallet." });
-            }
-            // Still try to connect, maybe the wallet will handle it.
-            connect({ connector: metaMaskConnector ?? connectors[0], chainId: targetChainId });
-        }
-      });
-    } else {
-       connect({ connector: metaMaskConnector ?? connectors[0] });
+    if (!metaMaskConnector) {
+        toast({ variant: "destructive", title: "MetaMask not found", description: "Please install MetaMask to continue." });
+        return;
     }
-  }, [connect, connectors, chainId, wagmiConfig.chains, switchChain, toast]);
+
+    try {
+        if (chainId !== targetChain.id) {
+            await switchChain({ chainId: targetChain.id });
+        }
+        await connect({ connector: metaMaskConnector, chainId: targetChain.id });
+    } catch (error: any) {
+        if (error instanceof UserRejectedRequestError) {
+            toast({ variant: "destructive", title: "Connection Failed", description: "Connection request rejected." });
+        } else if (error instanceof SwitchChainError) {
+            toast({ variant: "destructive", title: "Network Switch Failed", description: "Could not switch to the correct network. Please do it manually." });
+        } else {
+            toast({ variant: "destructive", title: "Connection Failed", description: "An unexpected error occurred while connecting." });
+        }
+        console.error("Connection error:", error);
+    }
+  }, [connect, connectors, chainId, targetChain.id, switchChain, toast]);
 
   const disconnectWallet = useCallback(async () => {
     setIsDisconnecting(true);
-    // Forcefully clear all application state immediately
     setSystemData(null);
-    // Then, tell wagmi to disconnect
     await disconnectAsync();
     toast({ title: "Wallet Disconnected" });
     setIsDisconnecting(false);
@@ -234,10 +249,10 @@ export function useWeb3Provider(): Web3ContextType {
             console.error("Failed to fetch token decimals", error);
         }
     };
-    if (isConnected) {
+    if (wagmiIsConnected) {
         fetchDecimals();
     }
-  }, [wagmiConfig, isConnected]);
+  }, [wagmiConfig, wagmiIsConnected]);
 
   const tokenBalance = tokenBalanceData ? formatUnits(tokenBalanceData.value, tokenDecimals) : "0";
 
@@ -253,14 +268,6 @@ export function useWeb3Provider(): Web3ContextType {
     setIsTutorialOpen(true);
   };
 
-  const refreshData = useCallback(async (): Promise<SystemData | null> => {
-    if(isDataFetching) return systemData;
-    if (!isConnected || !address) return null;
-    const freshSystemData = await getAIData();
-    await refetchTokenBalance();
-    return freshSystemData;
-  }, [getAIData, refetchTokenBalance, isDataFetching, systemData, isConnected, address]);
-
   const handleTransaction = async (
     action: string, 
     functionName: string, 
@@ -269,16 +276,15 @@ export function useWeb3Provider(): Web3ContextType {
   ) => {
     const { customToastTitle, showSuccessToast = true, gas, actionType } = options;
 
-    if (!isConnected || !address) {
-      const errorMsg = "Wallet not connected.";
+    if (!isConnected) {
+      const errorMsg = "Wallet not connected or wrong network.";
       toast({ variant: "destructive", title: "Error", description: errorMsg });
       throw new Error(errorMsg);
     }
 
-    const targetChainId = wagmiConfig.chains[0]?.id;
-    if (chainId !== targetChainId) {
-        toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${wagmiConfig.chains[0].name} to perform this action.` });
-        switchChain({ chainId: targetChainId! });
+    if (isWrongNetwork) {
+        toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${targetChain.name} to perform this action.` });
+        switchChain({ chainId: targetChain.id });
         throw new Error("Wrong network, switch initiated.");
     }
 
@@ -311,6 +317,7 @@ export function useWeb3Provider(): Web3ContextType {
       setTransactionState(action, 'done');
       setTransactionStatus({ action, status: 'confirmed' });
       await refreshData();
+      await refetchTokenBalance();
 
     } catch (e: any) {
         let reason = "An unknown error occurred.";
@@ -341,7 +348,7 @@ export function useWeb3Provider(): Web3ContextType {
   };
 
   const deposit = async (amount: number) => {
-    if (!isConnected || !address) {
+    if (!isConnected) {
       toast({ variant: "destructive", title: "Error", description: "Wallet not connected." });
       return;
     }
@@ -353,10 +360,9 @@ export function useWeb3Provider(): Web3ContextType {
     setTransactionState('deposit', 'awaiting_confirmation');
 
     try {
-        const targetChainId = wagmiConfig.chains[0]?.id;
-        if (chainId !== targetChainId) {
-            toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${wagmiConfig.chains[0].name} to stake.` });
-            switchChain({ chainId: targetChainId! });
+        if (isWrongNetwork) {
+            toast({ variant: "destructive", title: "Wrong Network", description: `Please switch to ${targetChain.name} to stake.` });
+            switchChain({ chainId: targetChain.id });
             throw new Error("Wrong network, switch initiated.");
         }
 
@@ -461,10 +467,11 @@ export function useWeb3Provider(): Web3ContextType {
     }
   };
 
-  const isLoading = isConnecting || (isConnected && (isTokenBalanceLoading || !systemData));
+  const isLoading = isConnecting || (wagmiIsConnected && (isTokenBalanceLoading || !systemData));
 
   return {
     isConnected: isConnected,
+    isWrongNetwork,
     address,
     formattedAddress,
     tokenBalance,
