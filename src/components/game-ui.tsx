@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import * as React from "react";
@@ -277,23 +275,23 @@ const RefreshTimer = () => {
     const [countdown, setCountdown] = React.useState(REFRESH_INTERVAL);
 
     React.useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if (isDataFetching) {
+        if (countdown <= 0) {
+            refreshData();
             setCountdown(REFRESH_INTERVAL);
-        } else {
-            timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        refreshData();
-                        return REFRESH_INTERVAL;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
         }
 
+        if (isDataFetching) {
+            // Reset countdown if a fetch is triggered manually or by other means
+            setCountdown(REFRESH_INTERVAL);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setCountdown(prev => prev - 1);
+        }, 1000);
+
         return () => clearInterval(timer);
-    }, [isDataFetching, refreshData]);
+    }, [countdown, isDataFetching, refreshData]);
 
     const handleRefresh = () => {
       if (!isDataFetching) {
@@ -908,7 +906,3 @@ export default function SystemUI() {
     </div>
   );
 }
-
-    
-
-      
