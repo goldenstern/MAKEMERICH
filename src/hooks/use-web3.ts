@@ -190,6 +190,7 @@ export function useWeb3Provider(): Web3ContextType {
     const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
     try {
         await connect({ connector: metaMaskConnector ?? connectors[0] });
+        await refreshData();
     } catch (error) {
         if (error instanceof UserRejectedRequestError) {
              toast({ variant: "destructive", title: "Connection Rejected", description: "You rejected the connection request in your wallet." });
@@ -198,7 +199,7 @@ export function useWeb3Provider(): Web3ContextType {
         }
         console.error("Connection failed", error);
     }
-  }, [connect, connectors, toast]);
+  }, [connect, connectors, toast, refreshData]);
 
   const disconnectWallet = useCallback(async () => {
     setIsDisconnecting(true);
@@ -496,5 +497,3 @@ export function useWeb3Provider(): Web3ContextType {
     tokenAddress
   };
 }
-
-      
