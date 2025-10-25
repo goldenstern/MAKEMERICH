@@ -168,6 +168,12 @@ export function useWeb3Provider(): Web3ContextType {
 
 
   useEffect(() => {
+    if (isConnected && address && !isDataFetching && !systemData) {
+      refreshData();
+    }
+  }, [address, isConnected, isDataFetching, systemData, refreshData]);
+
+  useEffect(() => {
     const unwatch = watchAccount(wagmiConfig, {
       onChange(account) {
         if (account.isConnected && account.address) {
@@ -189,8 +195,7 @@ export function useWeb3Provider(): Web3ContextType {
   const connectWallet = useCallback(async () => {
     const metaMaskConnector = connectors.find(c => c.id === 'metaMask');
     try {
-        await connect({ connector: metaMaskConnector ?? connectors[0] });
-        await refreshData();
+        await connect({ connector: metaMaskConnector ?? connectors[0], options: { eip6963: true } });
     } catch (error) {
         if (error instanceof UserRejectedRequestError) {
              toast({ variant: "destructive", title: "Connection Rejected", description: "You rejected the connection request in your wallet." });
@@ -199,7 +204,7 @@ export function useWeb3Provider(): Web3ContextType {
         }
         console.error("Connection failed", error);
     }
-  }, [connect, connectors, toast, refreshData]);
+  }, [connect, connectors, toast]);
 
   const disconnectWallet = useCallback(async () => {
     setIsDisconnecting(true);
@@ -396,7 +401,7 @@ export function useWeb3Provider(): Web3ContextType {
         if (e instanceof Error && e.message.includes("User rejected the request")) {
           toast({ variant: "destructive", title: "Cancelled", description: "Transaction was cancelled." });
         } else if (!(e instanceof Error && e.message.startsWith('Transaction failed'))) {
-           // Показываем ошибку, только если она не из handleTransaction
+           // Показываем ошибку, только si handleTransaction
            if (!e.message?.includes('User rejected the request') && !e.message.includes('Wrong network')) {
             toast({ variant: "destructive", title: "Deposit Error", description: e.message || "An unknown error occurred during deposit." });
            }
